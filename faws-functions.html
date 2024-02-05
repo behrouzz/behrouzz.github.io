@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Fundamental Astronomy With Swift Functions</title>
+  </head>
+
+  <body>
+    <h2>FAWS Functions</h2>
+
+
+<b>a2af</b><br>
+<code>GIVEN: (ndp: Int, angle: Double)</code><br>
+<code>RETURNED: (sign: Character, idmsf: [Int])</code><br>
+<hr>
+<b>a2tf</b><br>
+<code>GIVEN: (ndp: Int, angle: Double)</code><br>
+<code>RETURNED: (sign: Character, ihmsf: [Int])</code><br>
+<hr>
+<b>ab</b><br>
+<code>GIVEN: (pnat: [Double], v: [Double], s: Double, bm1: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>ae2hd</b><br>
+<code>GIVEN: (az: Double, el: Double, phi: Double)</code><br>
+<code>RETURNED: (ha: Double, dec: Double)</code><br>
+<hr>
+<b>af2a</b><br>
+<code>GIVEN: (s: Character, ideg: Int, iamin: Int, asec: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>anp</b><br>
+<code>GIVEN: (a: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>anpm</b><br>
+<code>GIVEN: (a: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>apcg</b><br>
+<code>GIVEN: (date1: Double, date2: Double, ebpv: [[Double]], ehp: [Double], astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>apcg13</b><br>
+<code>GIVEN: (date1: Double, date2: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>apci</b><br>
+<code>GIVEN: (date1: Double, date2: Double, ebpv: [[Double]], ehp: [Double], x: Double, y: Double, s: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>apci13</b><br>
+<code>GIVEN: (date1: Double, date2: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: (astrom: ASTROM, eo: Double)</code><br>
+<hr>
+<b>apco</b><br>
+<code>GIVEN: (date1: Double, date2: Double, ebpv: [[Double]], ehp: [Double], x: Double, y: Double, s: Double, theta: Double, elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, sp: Double, refa: Double, refb: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>apco13</b><br>
+<code>GIVEN: (utc1: Double, utc2: Double, dut1: Double, elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, phpa: Double, tc: Double, rh: Double, wl: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: (astrom: ASTROM, eo: Double)</code><br>
+<hr>
+<b>apcs</b><br>
+<code>GIVEN: (date1: Double, date2: Double, pv: [[Double]], ebpv: [[Double]], ehp: [Double], astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>apcs13</b><br>
+<code>GIVEN: (date1: Double, date2: Double, pv: [[Double]], astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>aper</b><br>
+<code>GIVEN: (theta: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>aper13</b><br>
+<code>GIVEN: (ut11: Double, ut12: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>apio</b><br>
+<code>GIVEN: (sp: Double, theta: Double, elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, refa: Double, refb: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>apio13</b><br>
+<code>GIVEN: (utc1: Double, utc2: Double, dut1: Double, elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, phpa: Double, tc: Double, rh: Double, wl: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: ASTROM</code><br>
+<hr>
+<b>atcc13</b><br>
+<code>GIVEN: (rc: Double, dc: Double, pr: Double, pd: Double, px: Double, rv: Double, date1: Double, date2: Double)</code><br>
+<code>RETURNED: (ra: Double, da: Double)</code><br>
+<hr>
+<b>atccq</b><br>
+<code>GIVEN: (rc: Double, dc: Double, pr: Double, pd: Double, px: Double, rv: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: (ra: Double, da: Double)</code><br>
+<hr>
+<b>atci13</b><br>
+<code>GIVEN: (rc: Double, dc: Double, pr: Double, pd: Double, px: Double, rv: Double, date1: Double, date2: Double)</code><br>
+<code>RETURNED: (ri: Double, di: Double, eo: Double)</code><br>
+<hr>
+<b>atciq</b><br>
+<code>GIVEN: (rc: Double, dc: Double, pr: Double, pd: Double, px: Double, rv: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: (ri: Double, di: Double)</code><br>
+<hr>
+<b>atciqn</b><br>
+<code>GIVEN: (rc: Double, dc: Double, pr: Double, pd: Double, px: Double, rv: Double, astrom: ASTROM, n: Int, b: [LDBODY])</code><br>
+<code>RETURNED: (ri: Double, di: Double)</code><br>
+<hr>
+<b>atciqz</b><br>
+<code>GIVEN: (rc: Double, dc: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: (ri: Double, di: Double)</code><br>
+<hr>
+<b>atco13</b><br>
+<code>GIVEN: (rc: Double, dc: Double, pr: Double, pd: Double, px: Double, rv: Double, utc1: Double, utc2: Double, dut1: Double, elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, phpa: Double, tc: Double, rh: Double, wl: Double)</code><br>
+<code>RETURNED: (aob: Double, zob: Double, hob: Double, dob: Double, rob: Double, eo: Double)</code><br>
+<hr>
+<b>atic13</b><br>
+<code>GIVEN: (ri: Double, di: Double, date1: Double, date2: Double)</code><br>
+<code>RETURNED: (rc: Double, dc: Double, eo: Double)</code><br>
+<hr>
+<b>aticq</b><br>
+<code>GIVEN: (ri: Double, di: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: (rc: Double, dc: Double)</code><br>
+<hr>
+<b>aticqn</b><br>
+<code>GIVEN: (ri: Double, di: Double, astrom: ASTROM, n: Int, b: [LDBODY])</code><br>
+<code>RETURNED: (rc: Double, dc: Double)</code><br>
+<hr>
+<b>atio13</b><br>
+<code>GIVEN: (ri: Double, di: Double, utc1: Double, utc2: Double, dut1: Double, elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, phpa: Double, tc: Double, rh: Double, wl: Double)</code><br>
+<code>RETURNED: (aob: Double, zob: Double, hob: Double, dob: Double, rob: Double)</code><br>
+<hr>
+<b>atioq</b><br>
+<code>GIVEN: (ri: Double, di: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: (aob: Double, zob: Double, hob: Double, dob: Double, rob: Double)</code><br>
+<hr>
+<b>atoc13</b><br>
+<code>GIVEN: (type: String, ob1: Double, ob2: Double, utc1: Double, utc2: Double, dut1: Double, elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, phpa: Double, tc: Double, rh: Double, wl: Double)</code><br>
+<code>RETURNED: (rc: Double, dc: Double)</code><br>
+<hr>
+<b>atoi13</b><br>
+<code>GIVEN: (type: String, ob1: Double, ob2: Double, utc1: Double, utc2: Double, dut1: Double, elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, phpa: Double, tc: Double, rh: Double, wl: Double)</code><br>
+<code>RETURNED: (ri: Double, di: Double)</code><br>
+<hr>
+<b>atoiq</b><br>
+<code>GIVEN: (type: String, ob1: Double, ob2: Double, astrom: ASTROM)</code><br>
+<code>RETURNED: (ri: Double, di: Double)</code><br>
+<hr>
+<b>bi00</b><br>
+<code>GIVEN: ()</code><br>
+<code>RETURNED: (dpsibi: Double, depsbi: Double, dra0: Double)</code><br>
+<hr>
+<b>bp00</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (rb: [[Double]], rp: [[Double]], rbp: [[Double]])</code><br>
+<hr>
+<b>bp06</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (rb: [[Double]], rp: [[Double]], rbp: [[Double]])</code><br>
+<hr>
+<b>bpn2xy</b><br>
+<code>GIVEN: (rbpn: [[Double]])</code><br>
+<code>RETURNED: (x: Double, y: Double)</code><br>
+<hr>
+<b>c2i00a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2i00b</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2i06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2ibpn</b><br>
+<code>GIVEN: (date1: Double, date2: Double, rbpn: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2ixy</b><br>
+<code>GIVEN: (date1: Double, date2: Double, x: Double, y: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2ixys</b><br>
+<code>GIVEN: (x: Double, y: Double, s: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2s</b><br>
+<code>GIVEN: (p: [Double])</code><br>
+<code>RETURNED: (theta: Double, phi: Double)</code><br>
+<hr>
+<b>c2t00a</b><br>
+<code>GIVEN: (tta: Double, ttb: Double, uta: Double, utb: Double, xp: Double, yp: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2t00b</b><br>
+<code>GIVEN: (tta: Double, ttb: Double, uta: Double, utb: Double, xp: Double, yp: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2t06a</b><br>
+<code>GIVEN: (tta: Double, ttb: Double, uta: Double, utb: Double, xp: Double, yp: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2tcio</b><br>
+<code>GIVEN: (rc2i: [[Double]], era: Double, rpom: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2teqx</b><br>
+<code>GIVEN: (rbpn: [[Double]], gst: Double, rpom: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2tpe</b><br>
+<code>GIVEN: (tta: Double, ttb: Double, uta: Double, utb: Double, dpsi: Double, deps: Double, xp: Double, yp: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>c2txy</b><br>
+<code>GIVEN: (tta: Double, ttb: Double, uta: Double, utb: Double, x: Double, y: Double, xp: Double, yp: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>cal2jd</b><br>
+<code>GIVEN: (iy: Int, im: Int, id: Int)</code><br>
+<code>RETURNED: (djm0: Double, djm: Double)</code><br>
+<hr>
+<b>cp</b><br>
+<code>GIVEN: (p: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>cpv</b><br>
+<code>GIVEN: (pv: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>cr</b><br>
+<code>GIVEN: (r: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>d2dtf</b><br>
+<code>GIVEN: (scale: String, ndp: Int, d1: Double, d2: Double)</code><br>
+<code>RETURNED: (iy: Int, im: Int, id: Int, ihmsf: [Int])</code><br>
+<hr>
+<b>d2tf</b><br>
+<code>GIVEN: (ndp: Int, days: Double)</code><br>
+<code>RETURNED: (sign: Character, ihmsf: [Int])</code><br>
+<hr>
+<b>dat</b><br>
+<code>GIVEN: (iy: Int, im: Int, id: Int, fd: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>dtdb</b><br>
+<code>GIVEN: (date1: Double, date2: Double, ut: Double, elong: Double, u: Double, v: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>dtf2d</b><br>
+<code>GIVEN: (scale: String, iy: Int, im: Int, id: Int, ihr: Int, imn: Int, sec: Double)</code><br>
+<code>RETURNED: (d1: Double, d2: Double)</code><br>
+<hr>
+<b>eceq06</b><br>
+<code>GIVEN: (date1: Double, date2: Double, dl: Double, db: Double)</code><br>
+<code>RETURNED: (dr: Double, dd: Double)</code><br>
+<hr>
+<b>ecm06</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>ee00</b><br>
+<code>GIVEN: (date1: Double, date2: Double, epsa: Double, dpsi: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>ee00a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>ee00b</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>ee06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>eect00</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>eform</b><br>
+<code>GIVEN: (n: Int)</code><br>
+<code>RETURNED: (a: Double, f: Double)</code><br>
+<hr>
+<b>eo06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>eors</b><br>
+<code>GIVEN: (rnpb: [[Double]], s: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>epb</b><br>
+<code>GIVEN: (dj1: Double, dj2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>epb2jd</b><br>
+<code>GIVEN: (epb: Double)</code><br>
+<code>RETURNED: (djm0: Double, djm: Double)</code><br>
+<hr>
+<b>epj</b><br>
+<code>GIVEN: (dj1: Double, dj2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>epj2jd</b><br>
+<code>GIVEN: (epj: Double)</code><br>
+<code>RETURNED: (djm0: Double, djm: Double)</code><br>
+<hr>
+<b>epv00</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (pvh: [[Double]], pvb: [[Double]])</code><br>
+<hr>
+<b>eqec06</b><br>
+<code>GIVEN: (date1: Double, date2: Double, dr: Double, dd: Double)</code><br>
+<code>RETURNED: (dl: Double, db: Double)</code><br>
+<hr>
+<b>eqeq94</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>era00</b><br>
+<code>GIVEN: (dj1: Double, dj2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fad03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fae03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>faf03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>faju03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fal03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>falp03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fama03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fame03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fane03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>faom03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fapa03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fasa03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>faur03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fave03</b><br>
+<code>GIVEN: (t: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>fk425</b><br>
+<code>GIVEN: (r1950: Double, d1950: Double, dr1950: Double, dd1950: Double, p1950: Double, v1950: Double)</code><br>
+<code>RETURNED: (r2000: Double, d2000: Double, dr2000: Double, dd2000: Double, p2000: Double, v2000: Double)</code><br>
+<hr>
+<b>fk45z</b><br>
+<code>GIVEN: (r1950: Double, d1950: Double, bepoch: Double)</code><br>
+<code>RETURNED: (r2000: Double, d2000: Double)</code><br>
+<hr>
+<b>fk524</b><br>
+<code>GIVEN: (r2000: Double, d2000: Double, dr2000: Double, dd2000: Double, p2000: Double, v2000: Double)</code><br>
+<code>RETURNED: (r1950: Double, d1950: Double, dr1950: Double, dd1950: Double, p1950: Double, v1950: Double)</code><br>
+<hr>
+<b>fk52h</b><br>
+<code>GIVEN: (r5: Double, d5: Double, dr5: Double, dd5: Double, px5: Double, rv5: Double)</code><br>
+<code>RETURNED: (rh: Double, dh: Double, drh: Double, ddh: Double, pxh: Double, rvh: Double)</code><br>
+<hr>
+<b>fk54z</b><br>
+<code>GIVEN: (r2000: Double, d2000: Double, bepoch: Double)</code><br>
+<code>RETURNED: (r1950: Double, d1950: Double, dr1950: Double, dd1950: Double)</code><br>
+<hr>
+<b>fk5hip</b><br>
+<code>GIVEN: ()</code><br>
+<code>RETURNED: (r5h: [[Double]], s5h: [Double])</code><br>
+<hr>
+<b>fk5hz</b><br>
+<code>GIVEN: (r5: Double, d5: Double, date1: Double, date2: Double)</code><br>
+<code>RETURNED: (rh: Double, dh: Double)</code><br>
+<hr>
+<b>fw2m</b><br>
+<code>GIVEN: (gamb: Double, phib: Double, psi: Double, eps: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>fw2xy</b><br>
+<code>GIVEN: (gamb: Double, phib: Double, psi: Double, eps: Double)</code><br>
+<code>RETURNED: (x: Double, y: Double)</code><br>
+<hr>
+<b>g2icrs</b><br>
+<code>GIVEN: (dl: Double, db: Double)</code><br>
+<code>RETURNED: (dr: Double, dd: Double)</code><br>
+<hr>
+<b>gc2gd</b><br>
+<code>GIVEN: (n: Int, xyz: [Double])</code><br>
+<code>RETURNED: (elong: Double, phi: Double, height: Double)</code><br>
+<hr>
+<b>gc2gde</b><br>
+<code>GIVEN: (a: Double, f: Double, xyz: [Double])</code><br>
+<code>RETURNED: (elong: Double, phi: Double, height: Double)</code><br>
+<hr>
+<b>gd2gc</b><br>
+<code>GIVEN: (n: Int, elong: Double, phi: Double, height: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>gd2gce</b><br>
+<code>GIVEN: (a: Double, f: Double, elong: Double, phi: Double, height: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>gmst00</b><br>
+<code>GIVEN: (uta: Double, utb: Double, tta: Double, ttb: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>gmst06</b><br>
+<code>GIVEN: (uta: Double, utb: Double, tta: Double, ttb: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>gmst82</b><br>
+<code>GIVEN: (dj1: Double, dj2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>gst00a</b><br>
+<code>GIVEN: (uta: Double, utb: Double, tta: Double, ttb: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>gst00b</b><br>
+<code>GIVEN: (uta: Double, utb: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>gst06</b><br>
+<code>GIVEN: (uta: Double, utb: Double, tta: Double, ttb: Double, rnpb: [[Double]])</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>gst06a</b><br>
+<code>GIVEN: (uta: Double, utb: Double, tta: Double, ttb: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>gst94</b><br>
+<code>GIVEN: (uta: Double, utb: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>icrs2g</b><br>
+<code>GIVEN: (dr: Double, dd: Double)</code><br>
+<code>RETURNED: (dl: Double, db: Double)</code><br>
+<hr>
+<b>h2fk5</b><br>
+<code>GIVEN: (rh: Double, dh: Double, drh: Double, ddh: Double, pxh: Double, rvh: Double)</code><br>
+<code>RETURNED: (r5: Double, d5: Double, dr5: Double, dd5: Double, px5: Double, rv5: Double)</code><br>
+<hr>
+<b>hd2ae</b><br>
+<code>GIVEN: (ha: Double, dec: Double, phi: Double)</code><br>
+<code>RETURNED: (az: Double, el: Double)</code><br>
+<hr>
+<b>hd2pa</b><br>
+<code>GIVEN: (ha: Double, dec: Double, phi: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>hfk5z</b><br>
+<code>GIVEN: (rh: Double, dh: Double, date1: Double, date2: Double)</code><br>
+<code>RETURNED: (r5: Double, d5: Double, dr5: Double, dd5: Double)</code><br>
+<hr>
+<b>ir</b><br>
+<code>GIVEN: ()</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>jd2cal</b><br>
+<code>GIVEN: (dj1: Double, dj2: Double)</code><br>
+<code>RETURNED: (iy: Int, im: Int, id: Int, fd: Double)</code><br>
+<hr>
+<b>jdcalf</b><br>
+<code>GIVEN: (ndp: Int, dj1: Double, dj2: Double)</code><br>
+<code>RETURNED: [Int]</code><br>
+<hr>
+<b>ld</b><br>
+<code>GIVEN: (bm: Double, p: [Double], q: [Double], e: [Double], em: Double, dlim: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>ldn</b><br>
+<code>GIVEN: (n: Int, b: [LDBODY], ob: [Double], sc: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>ldsun</b><br>
+<code>GIVEN: (p: [Double], e: [Double], em: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>lteceq</b><br>
+<code>GIVEN: (epj: Double, dl: Double, db: Double)</code><br>
+<code>RETURNED: (dr: Double, dd: Double)</code><br>
+<hr>
+<b>ltecm</b><br>
+<code>GIVEN: (epj: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>lteqec</b><br>
+<code>GIVEN: (epj: Double, dr: Double, dd: Double)</code><br>
+<code>RETURNED: (dl: Double, db: Double)</code><br>
+<hr>
+<b>ltp</b><br>
+<code>GIVEN: (epj: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>ltpb</b><br>
+<code>GIVEN: (epj: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>ltpecl</b><br>
+<code>GIVEN: (epj: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>ltpequ</b><br>
+<code>GIVEN: (epj: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>moon98</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>num00a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>num00b</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>num06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>numat</b><br>
+<code>GIVEN: (epsa: Double, dpsi: Double, deps: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>nut00a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (dpsi: Double, deps: Double)</code><br>
+<hr>
+<b>nut00b</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (dpsi: Double, deps: Double)</code><br>
+<hr>
+<b>nut06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (dpsi: Double, deps: Double)</code><br>
+<hr>
+<b>nut80</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (dpsi: Double, deps: Double)</code><br>
+<hr>
+<b>nutm80</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>obl06</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>obl80</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>p06e</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (eps0: Double, psia: Double, oma: Double, bpa: Double, bqa: Double, pia: Double, bpia: Double, epsa: Double, chia: Double, za: Double, zetaa: Double, thetaa: Double, pa: Double, gam: Double, phi: Double, psi: Double)</code><br>
+<hr>
+<b>p2pv</b><br>
+<code>GIVEN: (p: [Double])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>p2s</b><br>
+<code>GIVEN: (p: [Double])</code><br>
+<code>RETURNED: (theta: Double, phi: Double, r: Double)</code><br>
+<hr>
+<b>pap</b><br>
+<code>GIVEN: (a: [Double], b: [Double])</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>pas</b><br>
+<code>GIVEN: (al: Double, ap: Double, bl: Double, bp: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>pb06</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (bzeta: Double, bz: Double, btheta: Double)</code><br>
+<hr>
+<b>pdp</b><br>
+<code>GIVEN: (a: [Double], b: [Double])</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>pfw06</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (gamb: Double, phib: Double, psib: Double, epsa: Double)</code><br>
+<hr>
+<b>plan94</b><br>
+<code>GIVEN: (date1: Double, date2: Double, nPlanet: Int)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pmat00</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pmat06</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pmat76</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pm</b><br>
+<code>GIVEN: (p: [Double])</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>pmp</b><br>
+<code>GIVEN: (a: [Double], b: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>pmpx</b><br>
+<code>GIVEN: (rc: Double, dc: Double, pr: Double, pd: Double, px: Double, rv: Double, pmt: Double, pob: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>pmsafe</b><br>
+<code>GIVEN: (ra1: Double, dec1: Double, pmr1: Double, pmd1: Double, px1: Double, rv1: Double, ep1a: Double, ep1b: Double, ep2a: Double, ep2b: Double)</code><br>
+<code>RETURNED: (ra2: Double, dec2: Double, pmr2: Double, pmd2: Double, px2: Double, rv2: Double)</code><br>
+<hr>
+<b>pn</b><br>
+<code>GIVEN: (p: [Double])</code><br>
+<code>RETURNED: (r: Double, u: [Double])</code><br>
+<hr>
+<b>pn00</b><br>
+<code>GIVEN: (date1: Double, date2: Double, dpsi: Double, deps: Double)</code><br>
+<code>RETURNED: (epsa: Double, rb: [[Double]], rp: [[Double]], rbp: [[Double]], rn: [[Double]], rbpn: [[Double]])</code><br>
+<hr>
+<b>pn00a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (dpsi: Double, deps: Double, epsa: Double, rb: [[Double]], rp: [[Double]], rbp: [[Double]], rn: [[Double]], rbpn: [[Double]])</code><br>
+<hr>
+<b>pn00b</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (dpsi: Double, deps: Double, epsa: Double, rb: [[Double]], rp: [[Double]], rbp: [[Double]], rn: [[Double]], rbpn: [[Double]])</code><br>
+<hr>
+<b>pn06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (dpsi: Double, deps: Double, epsa: Double, rb: [[Double]], rp: [[Double]], rbp: [[Double]], rn: [[Double]], rbpn: [[Double]])</code><br>
+<hr>
+<b>pn06</b><br>
+<code>GIVEN: (date1: Double, date2: Double, dpsi: Double, deps: Double)</code><br>
+<code>RETURNED: (epsa: Double, rb: [[Double]], rp: [[Double]], rbp: [[Double]], rn: [[Double]], rbpn: [[Double]])</code><br>
+<hr>
+<b>pnm00a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pnm00b</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pnm06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pnm80</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pom00</b><br>
+<code>GIVEN: (xp: Double, yp: Double, sp: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>ppp</b><br>
+<code>GIVEN: (a: [Double], b: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>ppsp</b><br>
+<code>GIVEN: (a: [Double], s: Double, b: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>pr00</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (dpsipr: Double, depspr: Double)</code><br>
+<hr>
+<b>prec76</b><br>
+<code>GIVEN: (date01: Double, date02: Double, date11: Double, date12: Double)</code><br>
+<code>RETURNED: (zeta: Double, z: Double, theta: Double)</code><br>
+<hr>
+<b>pv2p</b><br>
+<code>GIVEN: (pv: [[Double]])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>pv2s</b><br>
+<code>GIVEN: (pv: [[Double]])</code><br>
+<code>RETURNED: (theta: Double, phi: Double, r: Double, td: Double, pd: Double, rd: Double)</code><br>
+<hr>
+<b>pvdpv</b><br>
+<code>GIVEN: (a: [[Double]], b: [[Double]])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>pvm</b><br>
+<code>GIVEN: (pv: [[Double]])</code><br>
+<code>RETURNED: (r: Double, s: Double)</code><br>
+<hr>
+<b>pvmpv</b><br>
+<code>GIVEN: (a: [[Double]], b: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pvppv</b><br>
+<code>GIVEN: (a: [[Double]], b: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pvstar</b><br>
+<code>GIVEN: (pv: [[Double]])</code><br>
+<code>RETURNED: (ra: Double, dec: Double, pmr: Double, pmd: Double, px: Double, rv: Double)</code><br>
+<hr>
+<b>pvtob</b><br>
+<code>GIVEN: (elong: Double, phi: Double, hm: Double, xp: Double, yp: Double, sp: Double, theta: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pvu</b><br>
+<code>GIVEN: (dt: Double, pv: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pvup</b><br>
+<code>GIVEN: (dt: Double, pv: [[Double]])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>pvxpv</b><br>
+<code>GIVEN: (a: [[Double]], b: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>pxp</b><br>
+<code>GIVEN: (a: [Double], b: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>refco</b><br>
+<code>GIVEN: (phpa: Double, tc: Double, rh: Double, wl: Double)</code><br>
+<code>RETURNED: (refa: Double, refb: Double)</code><br>
+<hr>
+<b>rm2v</b><br>
+<code>GIVEN: (r: [[Double]])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>rv2m</b><br>
+<code>GIVEN: (w: [Double])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>rx</b><br>
+<code>GIVEN: (phi: Double, rMat: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>rxp</b><br>
+<code>GIVEN: (r: [[Double]], p: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>rxpv</b><br>
+<code>GIVEN: (r: [[Double]], pv: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>rxr</b><br>
+<code>GIVEN: (a: [[Double]], b: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>ry</b><br>
+<code>GIVEN: (theta: Double, rMat: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>rz</b><br>
+<code>GIVEN: (psi: Double, rMat: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>s00a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>s00b</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>s00</b><br>
+<code>GIVEN: (date1: Double, date2: Double, x: Double, y: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>s06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>s06</b><br>
+<code>GIVEN: (date1: Double, date2: Double, x: Double, y: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>s2c</b><br>
+<code>GIVEN: (theta: Double, phi: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>s2p</b><br>
+<code>GIVEN: (theta: Double, phi: Double, r: Double)</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>s2pv</b><br>
+<code>GIVEN: (theta: Double, phi: Double, r: Double, td: Double, pd: Double, rd: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>s2xpv</b><br>
+<code>GIVEN: (s1: Double, s2: Double, pv: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>sepp</b><br>
+<code>GIVEN: (a: [Double], b: [Double])</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>seps</b><br>
+<code>GIVEN: (al: Double, ap: Double, bl: Double, bp: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>sp00</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>starpm</b><br>
+<code>GIVEN: (ra1: Double, dec1: Double, pmr1: Double, pmd1: Double, px1: Double, rv1: Double, ep1a: Double, ep1b: Double, ep2a: Double, ep2b: Double)</code><br>
+<code>RETURNED: (ra2: Double, dec2: Double, pmr2: Double, pmd2: Double, px2: Double, rv2: Double)</code><br>
+<hr>
+<b>starpv</b><br>
+<code>GIVEN: (ra: Double, dec: Double, pmr: Double, pmd: Double, px: Double, rv: Double)</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>sxp</b><br>
+<code>GIVEN: (s: Double, p: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>sxpv</b><br>
+<code>GIVEN: (s: Double, pv: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>taitt</b><br>
+<code>GIVEN: (tai1: Double, tai2: Double)</code><br>
+<code>RETURNED: (tt1: Double, tt2: Double)</code><br>
+<hr>
+<b>taiut1</b><br>
+<code>GIVEN: (tai1: Double, tai2: Double, dta: Double)</code><br>
+<code>RETURNED: (ut11: Double, ut12: Double)</code><br>
+<hr>
+<b>taiutc</b><br>
+<code>GIVEN: (tai1: Double, tai2: Double)</code><br>
+<code>RETURNED: (utc1: Double, utc2: Double)</code><br>
+<hr>
+<b>tcbtdb</b><br>
+<code>GIVEN: (tcb1: Double, tcb2: Double)</code><br>
+<code>RETURNED: (tdb1: Double, tdb2: Double)</code><br>
+<hr>
+<b>tcgtt</b><br>
+<code>GIVEN: (tcg1: Double, tcg2: Double)</code><br>
+<code>RETURNED: (tt1: Double, tt2: Double)</code><br>
+<hr>
+<b>tdbtcb</b><br>
+<code>GIVEN: (tdb1: Double, tdb2: Double)</code><br>
+<code>RETURNED: (tcb1: Double, tcb2: Double)</code><br>
+<hr>
+<b>tdbtt</b><br>
+<code>GIVEN: (tdb1: Double, tdb2: Double, dtr: Double)</code><br>
+<code>RETURNED: (tt1: Double, tt2: Double)</code><br>
+<hr>
+<b>tf2a</b><br>
+<code>GIVEN: (s: Character, ihour: Int, imin: Int, sec: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>tf2d</b><br>
+<code>GIVEN: (s: Character, ihour: Int, imin: Int, sec: Double)</code><br>
+<code>RETURNED: Double</code><br>
+<hr>
+<b>tpors</b><br>
+<code>GIVEN: (xi: Double, eta: Double, a: Double, b: Double)</code><br>
+<code>RETURNED: (a01: Double, b01: Double, a02: Double, b02: Double, solution: Int)</code><br>
+<hr>
+<b>tporv</b><br>
+<code>GIVEN: (xi: Double, eta: Double, v: [Double])</code><br>
+<code>RETURNED: (v01: [Double], v02: [Double], solution: Int)</code><br>
+<hr>
+<b>tpsts</b><br>
+<code>GIVEN: (xi: Double, eta: Double, a0: Double, b0: Double)</code><br>
+<code>RETURNED: (a: Double, b: Double)</code><br>
+<hr>
+<b>tpstv</b><br>
+<code>GIVEN: (xi: Double, eta: Double, v0: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>tpxes</b><br>
+<code>GIVEN: (a: Double, b: Double, a0: Double, b0: Double)</code><br>
+<code>RETURNED: (xi: Double, eta: Double, status: Int)</code><br>
+<hr>
+<b>tpxev</b><br>
+<code>GIVEN: (v: [Double], v0: [Double])</code><br>
+<code>RETURNED: (xi: Double, eta: Double, status: Int)</code><br>
+<hr>
+<b>tr</b><br>
+<code>GIVEN: (r: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>trxp</b><br>
+<code>GIVEN: (r: [[Double]], p: [Double])</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>trxpv</b><br>
+<code>GIVEN: (r: [[Double]], pv: [[Double]])</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>tttai</b><br>
+<code>GIVEN: (tt1: Double, tt2: Double)</code><br>
+<code>RETURNED: (tai1: Double, tai2: Double)</code><br>
+<hr>
+<b>tttcg</b><br>
+<code>GIVEN: (tt1: Double, tt2: Double)</code><br>
+<code>RETURNED: (tcg1: Double, tcg2: Double)</code><br>
+<hr>
+<b>tttdb</b><br>
+<code>GIVEN: (tt1: Double, tt2: Double, dtr: Double)</code><br>
+<code>RETURNED: (tdb1: Double, tdb2: Double)</code><br>
+<hr>
+<b>ttut1</b><br>
+<code>GIVEN: (tt1: Double, tt2: Double, dt: Double)</code><br>
+<code>RETURNED: (ut11: Double, ut12: Double)</code><br>
+<hr>
+<b>ut1tai</b><br>
+<code>GIVEN: (ut11: Double, ut12: Double, dta: Double)</code><br>
+<code>RETURNED: (tai1: Double, tai2: Double)</code><br>
+<hr>
+<b>ut1tt</b><br>
+<code>GIVEN: (ut11: Double, ut12: Double, dt: Double)</code><br>
+<code>RETURNED: (tt1: Double, tt2: Double)</code><br>
+<hr>
+<b>ut1utc</b><br>
+<code>GIVEN: (ut11: Double, ut12: Double, dut1: Double)</code><br>
+<code>RETURNED: (utc1: Double, utc2: Double)</code><br>
+<hr>
+<b>utctai</b><br>
+<code>GIVEN: (utc1: Double, utc2: Double)</code><br>
+<code>RETURNED: (tai1: Double, tai2: Double)</code><br>
+<hr>
+<b>utcut1</b><br>
+<code>GIVEN: (utc1: Double, utc2: Double, dut1: Double)</code><br>
+<code>RETURNED: (ut11: Double, ut12: Double)</code><br>
+<hr>
+<b>xy06</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (x: Double, y: Double)</code><br>
+<hr>
+<b>xys00a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (x: Double, y: Double, s: Double)</code><br>
+<hr>
+<b>xys00b</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (x: Double, y: Double, s: Double)</code><br>
+<hr>
+<b>xys06a</b><br>
+<code>GIVEN: (date1: Double, date2: Double)</code><br>
+<code>RETURNED: (x: Double, y: Double, s: Double)</code><br>
+<hr>
+<b>zp</b><br>
+<code>GIVEN: ()</code><br>
+<code>RETURNED: [Double]</code><br>
+<hr>
+<b>zpv</b><br>
+<code>GIVEN: ()</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+<b>zr</b><br>
+<code>GIVEN: ()</code><br>
+<code>RETURNED: [[Double]]</code><br>
+<hr>
+
+
+
+   </body> 
+ </html>
