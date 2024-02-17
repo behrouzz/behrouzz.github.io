@@ -5,11 +5,10 @@ In this example we will show step by step calculations to convert ICRS catalog c
 The observation site is located at 9◦.712156 E, 52◦.385639 N, 200m above sea level. The time of observation is UTC 2003/08/26 00:37:38.973810.
 
 The target of observation is a fictitious Tycho 2 star, epoch 2000:
-
 - [ α, δ ] = 353◦.22987757, +52◦.27730247
-– Proper motions: μα cos δ = +22.9mas/year, μδ = −2.1mas/year
-– Parallax 23mas
-– Radial velocity +25 km/s
+- Proper motions: μα cos δ = +22.9mas/year, μδ = −2.1mas/year
+- Parallax 23mas
+- Radial velocity +25 km/s
 
 The Earth orientation parameters (from IERS):
 - DUT1: −0.349535 s
@@ -49,7 +48,7 @@ In the following steps, we want to print the results. Since the results are in c
 func printSph(_ p: [Double], _ text: String) -> () {
     let (w, r) = c2s(p)
     let d = anp(w)
-    print("\(text): \(r*DR2D) \(d*DR2D)")
+    print("\(text): \(r*DR2D), \(d*DR2D)")
 }
 ```
 
@@ -90,7 +89,7 @@ Until here, we had nothing to do with the coordinates of the star. Now we start 
 // Proper motion and parallax, giving BCRS coordinate direction
 let pmt = ((tt1 - DJ00) + tt2) / DJY // time in julian years
 let pco = pmpx(rc, dc, pr, pd, px, rv, pmt, pvb[0])
-printSph(pco, "BCRS1")
+printSph(pco, "BCRS1      ")
 ```
 
 We apply the light deflection by the Sun, using `ldsun`.
@@ -98,7 +97,7 @@ We apply the light deflection by the Sun, using `ldsun`.
 ```swift
 // Light deflection by the Sun, giving BCRS natural direction
 let pnat = ldsun(pco, eh, em)
-printSph(pnat, "BCRS2")
+printSph(pnat, "BCRS2      ")
 ```
 
 Applying the aberration, using ab, gives us the GCRS coordinates of the star.
@@ -106,7 +105,7 @@ Applying the aberration, using ab, gives us the GCRS coordinates of the star.
 ```swift
 // Aberration, giving GCRS proper direction
 let ppr = ab(pnat, v, em, bm1)
-printSph(ppr, "GCRS ")
+printSph(ppr, "GCRS       ")
 ```
 
 Now that we have the GCRS coordinates of the star, we can multiply the *BPN* matrix to it in order to get CIRS coordinates of the star.
@@ -114,7 +113,7 @@ Now that we have the GCRS coordinates of the star, we can multiply the *BPN* mat
 ```swift
 // Bias-precession-nutation, giving CIRS proper direction
 let pi = rxp(bpn, ppr)
-printSph(pi, "CIRS ")
+printSph(pi, "CIRS       ")
 
 // CIRS RA,Dec
 let (w, di) = c2s(pi)
@@ -138,8 +137,8 @@ let (aot, zot, hot, dot, rot) = atio13(
     elong, phi, hm, xp, yp,
     0.0, 0.0, 0.0, 0.0
 )
-print("Topoce:, \(hot*DR2D), \(dot*DR2D)")
-print("Topoce:, \(aot*DR2D), \(90-zot*DR2D)")
+print("Topocentric:, \(hot*DR2D), \(dot*DR2D)")
+print("Topocentric:, \(aot*DR2D), \(90-zot*DR2D)")
 
 // CIRS to observed
 let (aob, zob, hob, dob, rob) = atio13(
@@ -147,10 +146,17 @@ let (aob, zob, hob, dob, rob) = atio13(
     elong, phi, hm, xp, yp,
     phpa, tc, rh, wl
 )
-print("Observ:, \(aob*DR2D), \(90-zob*DR2D)")
+print("Observed   :, \(aob*DR2D), \(90-zob*DR2D)")
 ```
 
 The output:
 
 ```
+BCRS1      : 52.27730584234127, 353.2299188909816
+BCRS2      : 52.277305175083455, 353.22991848170153
+GCRS       : 52.276952625332505, 353.23789320692833
+CIRS       : 52.29554174097641, 353.23300208961683
+Topocentric:, -0.2950796293211075, 52.29549062787615
+Topocentric:, 116.44983887937016, 89.79843387472513
+Observed   :, 116.44983887937016, 89.79848799911075
 ```
