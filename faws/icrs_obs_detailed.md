@@ -26,7 +26,7 @@ let rc = 353.22987757 * DD2R
 let dc = 52.27730247  * DD2R
 let pr = atan2(22.9 * DMAS2R, cos(dc))
 let pd = -2.1 * DMAS2R
-let px = 23.0 * 0.001 // ?????????????????
+let px = 23.0 * 0.001
 let rv = 25.0
 
 // Time of observation (convert UTC to TT)
@@ -137,8 +137,8 @@ let (aot, zot, hot, dot, rot) = atio13(
     elong, phi, hm, xp, yp,
     0.0, 0.0, 0.0, 0.0
 )
-print("Topocentric:, \(hot*DR2D), \(dot*DR2D)")
-print("Topocentric:, \(aot*DR2D), \(90-zot*DR2D)")
+print("Topocentric: \(hot*DR2D), \(dot*DR2D)")
+print("Topocentric: \(aot*DR2D), \(90-zot*DR2D)")
 
 // CIRS to observed
 let (aob, zob, hob, dob, rob) = atio13(
@@ -146,7 +146,7 @@ let (aob, zob, hob, dob, rob) = atio13(
     elong, phi, hm, xp, yp,
     phpa, tc, rh, wl
 )
-print("Observed   :, \(aob*DR2D), \(90-zob*DR2D)")
+print("Observed   : \(aob*DR2D), \(90-zob*DR2D)")
 ```
 
 The output:
@@ -156,7 +156,9 @@ BCRS1      : 52.27730584234127, 353.2299188909816
 BCRS2      : 52.277305175083455, 353.22991848170153
 GCRS       : 52.276952625332505, 353.23789320692833
 CIRS       : 52.29554174097641, 353.23300208961683
-Topocentric:, -0.2950796293211075, 52.29549062787615
-Topocentric:, 116.44983887937016, 89.79843387472513
-Observed   :, 116.44983887937016, 89.79848799911075
+Topocentric: -0.2950796293211075, 52.29549062787615
+Topocentric: 116.44983887937016, 89.79843387472513
+Observed   : 116.44983887937016, 89.79848799911075
 ```
+
+The [Swift file](https://raw.githubusercontent.com/behrouzz/behrouzz.github.io/master/faws/icrs_obs_detailed.swift) of this example.
