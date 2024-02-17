@@ -89,8 +89,8 @@ let (aot, zot, hot, dot, rot) = atio13(
 		elong, phi, hm, xp, yp,
 		0.0, 0.0, 0.0, 0.0
 )
-print("Topocentric:, \(hot*DR2D), \(dot*DR2D)")
-print("Topocentric:, \(aot*DR2D), \(90-zot*DR2D)")
+print("Topocentric: \(hot*DR2D), \(dot*DR2D)")
+print("Topocentric: \(aot*DR2D), \(90-zot*DR2D)")
 
 // CIRS to observed
 let (aob, zob, hob, dob, rob) = atio13(
@@ -98,4 +98,4 @@ let (aob, zob, hob, dob, rob) = atio13(
 		elong, phi, hm, xp, yp,
 		phpa, tc, rh, wl
 )
-print("Observed   :, \(aob*DR2D), \(90-zob*DR2D)")
+print("Observed   : \(aob*DR2D), \(90-zob*DR2D)")
