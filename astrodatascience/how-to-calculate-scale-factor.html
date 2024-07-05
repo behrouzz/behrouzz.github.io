@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>How to calculate Scale Factor?</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>How to calculate Scale Factor?</h1>
+
+<h2>What is the scale factor?</h2>
+
+<p>One of the most important characteristics of a universe is its scale factor. Scale factor is a dimensionless function of time. Imagine the current distance between two points to be \(L\). If the universe is expanding, this value will be increased in the future. At a given moment in the future, for example, the distance between these two points will be \(1.5 \times L\). We can say that the scale factor at this moment is 1.5, which means that these points have gone away from each other 1.5 time relative to our epoch. Similarly, if their distance at given moment in the past was \(0.7 \times L\), it means that the scale factor at that moment was 0.7, and so on. The scale factor at our epoch is 1.</p>
+
+<p>The scale factor is a function of time and it is essential to know how to calculate it. To do most of the calculations in cosmology, we need scale factor. For example, to find the <em>proper distance</em> of a galaxy, you have to know the scale factor. We will use these kinds of calculations in others posts, but for now, we are going to show how to calculate the scale factor.</p>
+
+<h2>Theoretical background</h2>
+
+<p>The <a href="https://en.wikipedia.org/wiki/Friedmann_equations">Friedmann equation</a> for a universe consisting of radiation, matter and dark energy can be written in the following form:</p>
+
+\[ \frac{H^2}{H_{0}^2}=\frac{\Omega _{r,0}}{a^{4}}+\frac{\Omega _{m,0}}{a^{3}}+\Omega _{\Lambda,0}+\frac{1-\Omega _{0}}{a^{2}} \]
+
+<p>In this equation, \(a\) is the scale factor as a function of time; \(H\) is the Hubble parameter which is a function of time, and \(H_{0}\) is the Hubble constant - the Hubble parameter in our time. The relation between Hubble parameter and scale factor is simply \(H=\dot{a}/a\).</p>
+
+<p>At the right side of the equation, \(\Omega _{r,0}\), \(\Omega _{m,0}\) and \(\Omega _{\Lambda,0}\) are density parameters of radiation, matter and dark energy in our epoch. The total density parameter \(\Omega _{0}\) is defined as:</p>
+
+\[ \Omega _{0} = \Omega _{r,0} + \Omega _{m,0} + \Omega _{\Lambda,0} \]
+
+<p>For a flat universe \(\Omega _{0}=1\). Rearranging the equation, we find time \(t\) as a function of scale factor \(a\) as follow:</p>
+
+\[ \int_{0}^{a}\frac{\mathrm{d} a}{\sqrt{\frac{\Omega _{r,0}}{a^{2}}+\frac{\Omega _{m,0}}{a}+a^{2}\Omega _{\Lambda,0}}}=H_{0}t \]
+
+<p>This equation gives us \(t\) in terms of \(a\). But we need \(a\) as a function of \(t\). Unfortunately, this integral can not be solved mathematically. Here, we are going to solve it numerically.</p>
+
+<p>Befor solving the equation, we need to know the values of \(\Omega _{r,0}\), \(\Omega _{m,0}\) and \(\Omega _{\Lambda,0}\). According to <a href="https://en.wikipedia.org/wiki/Planck_(spacecraft)#2018_final_data_release">Planck Mission final results</a>, released in 2018, we know:</p>
+
+\[ H_{0} = 67.66 : \frac{km/s}{Mpc} \]
+
+\[ \Omega _{photon,0} = 5.40202 \times 10^{-5} \]
+
+\[ \Omega _{neutrino,0} = 0.00144 \]
+
+\[ \Omega _{baryon,0} = 0.04897 \]
+
+\[ \Omega _{non-baryon,0} = 0.26069 \]
+
+\[ \Omega _{\Lambda,0} = 0.68885 \]
+
+<p>Density parameter of radiation is the sum of density parameters of photos and neutrinos:</p>
+
+\[ \Omega _{r,0} = \Omega _{photon,0} + \Omega _{neutrino,0} \]
+\[ = 5.40202 \times 10^{-5} + 0.00144 \]
+\[ = 0.00149 \]
+
+<p>Density parameter of matter is the sum of density parameters of baryonic matter and non-baryonic (dark) matter:</p>
+
+\[ \Omega _{m,0} = \Omega _{baryon,0} + \Omega _{non-baryon,0} \]
+\[ = 0.04897 + 0.26069 \]
+\[ = 0.30966 \]
+
+<p>By adding up density parameters of radiation, matter and dark energy, we can find the total density parameter:</p>
+
+\[ \Omega _{0} = \Omega _{r,0} + \Omega _{m,0} + \Omega _{\Lambda,0} \]
+\[ = 0.00149 + 0.30966 + 0.68885 = 1 \]
+
+<p>Since \(\Omega_{0}=1\) we can say that our universe is flat.</p>
+
+<h2>How to implement?</h2>
+
+<p>Now that we know the necessary data and formula, we're going to use them to calculate scale factor as function of time. We divide the process of calculation in five steps:</p>
+
+<p><b>step 1:</b> First, we have to import necessary libraries and define the input values.</p>
+
+<p><b>step 2:</b> Then, we take a range of evenly spaced numbers to represent \(a\). In order to do this, we use the <code>np.linspace</code> function which defines a range of numbers. Let's say we want to define 5000 numbers between 0 to 3, as the scale factor. Instead of 0, we'll use a number close to zero, such as \(10^{-10}\), to prevent the <em>division by zero</em> error.</p>
+
+<p><b>step 3:</b> In order to calculate \(t\), we should first calculate the expression in the integral. Since it is a function of \(a\), we have to define a function. Let's call it <code>expr</code>. Then we'll use <code>integrate</code> from <em>scipy</em> to calculate \(t\).</p>
+
+<p><b>step 4:</b> Now, we have a range of points for \(a\) and the corresponding points for \(t\). But we need the relation between \(a\) and \(t\) as a function, not as ranges of points. To find \(a\) as function of \(t\), a good method would be to use polynomial fit. We use <code>np.polyfit</code> and <code>np.poly1d</code> functions from <em>numpy</em> for this reason. We should pass our desired <em>degree of the fitting polynomial</em> to <code>np.polyfit</code>. Let's give it 9. You can increase this number, but you'll have to wait more! After calculating polynomial coefficients, we pass them to <code>np.poly1d</code> to create a <em>one-dimensional polynomial class</em>, which behaves like a function. We have now \(a\) as a <em>one-dimensional polynomial class</em> which is our final function. We can print it easily with <code>print</code> to see the full expression, or we can pass it a time (in billion years since the Big Bang) to find the corresponding scale factor. For instance, if you pass it the current age of the universe (13.8) you should get 1.</p>
+
+<p><b>step 5</b>: Using <code>np.linspace</code> we define a new range to represent the time, between 0 and 30, in billion years from the Big Bang. Then we use our calculated polynomial instance to find the corresponding scale factors for each point in the time range. one advantage of using <code>np.poly1d</code> class is that we can simply use its <code>deriv</code> method to calculate the derivative of this polynomial. It is important to have the derivative of the scale factor.</p>
+
+<script src="https://gist.github.com/behrouzz/3e1672b5da725be68e476af6a6848d78.js"></script>
+
+<p>The scale factor \(a\) calculated in the above code, is the following polynomial expression:</p>
+
+\[ a = 7.209 \times 10^{-12} t^{9} - 1.113\times 10^{-9} t^{8} + 7.29\times 10^{-8} t^{7} \]
+\[ - 2.64\times 10^{-6} t^{6} + 5.776\times 10^{-5} t^{5} - 0.0007852 t^{4} \]
+\[ + 0.006647 t^{3} - 0.03411 t^{2} + 0.1594 t + 0.02016 \]
+
+<p>I have already implemented these calculations in the <code>cosmology</code> module of <a href="https://pypi.org/project/hypatie/">hypatie</a> python package. You can use the <code>CosModel</code> class of this module to create your own model of the universe, or you can use the <code>Planck18</code> class to create a model based on values from the Planck 2018 data release. Once you have created your cosmological model, you can simply use <code>scale_factor()</code> method to create the scale factor function.</p>
+
+<p>The following script does exactly the same calculations as above, using <a href="https://pypi.org/project/hypatie/">hypatie</a> python package. Then, it plots the scale factor and its first derivative.</p>
+
+<script src="https://gist.github.com/behrouzz/514485f44d2a85c5738461cd21794993.js"></script>
+
+<p>By looking at both charts, we can see that the scale factor has always been increasing since the Big Bang and it will continue to increase.</p>
+
+<p>Although the derivative of scale factor has always been positive, but it decreased rapidly when the universe was very young. Then, a few billion years after that, the slope of the derivative (second derivative of scale factor) approaches to zero. At a moment about eight billion years after the Big Bang, the derivative of scale factor begins to increase. So, we can distinguish three stages in the expanding life of the universe.</p>
+
+<p>In the early stage of the universe, the energy density of <em>radiation</em> was significant. 
+Then, energy density of <em>matter</em> dominates gradually and the decrease in the derivative chart approaches to zero. After this moment, energy density of the <em>dark energy</em> starts to dominate over the other components. Since then, the expansion rate is increasing and as you can see in the second chart, the second derivative of scale factor will continue to increase infinitely.</p>
+
+
+</body>
+</html>

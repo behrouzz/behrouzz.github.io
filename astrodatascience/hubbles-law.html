@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Hubble’s Law</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Hubble’s Law</h1>
+
+<p>In 1929 Edwin Hubble published an <a href="https://www.pnas.org/content/15/3/168" target="_blank" rel="noopener">article</a> in which he presented empirical evidence that our universe is expanding. At that time, most of the scientists believed in a static universe. After publishing Hubble's article, Einstein called the assumption of static universe his <em>biggest mistake</em>. He went to Mount Wilson Observatory to thank Hubble for his great discovery.</p>
+
+<h2>Hubble Constant</h2>
+
+<p>In this article, Hubble presented a linear relationship between distance and radial velocities of a number of galaxies. This relation, which is known as <em>Hubble's Law</em>, is represented as follow:</p>
+
+\[ v = H_{0} D \]
+
+<p>In this formula, \(v\) is the radial velocity, \(D\) is proper distance and \(H_{0}\) is Hubble constant. It states that galaxies are moving away from each other at a speed proportional to their distances. In other words, the farther a galaxy is from us, the faster it is moving away from us.</p>
+
+<p>Hubble used a sample of galaxies whose distances where known. Instead of radial velocity, he used <a href="http://astrodatascience.net/index.php/2021/08/24/what-is-redshift/" target="_blank" rel="noopener">redshift</a>. We know that \(v = cz\), so knowing the redshift of a galaxy, we can find its radial velocity simply by multiplying redshift by speed of light.</p>
+
+<p>Now I'm going to do exactly what Hubble did in his famous article. You can find the sample used by Hubble as a CSV file <a href="https://github.com/behrouzz/astrodatascience/blob/main/data/hubble1929.csv" target="_blank" rel="noopener">here</a>. Let's load the dataset and see a few rows of it.</p>
+
+<pre>
+>>> import pandas as pd
+>>> data = &quot;https://github.com/behrouzz/astrodatascience/raw/main/data/hubble1929.csv&quot;
+>>> df = pd.read_csv(data)
+>>> print(df.head())
+     galaxy  distance  velocity
+0     S.Mag     0.032       170
+1     L.Mag     0.034       290
+2  NGC.6822     0.214      -130
+3   NGC.598     0.263       -70
+4   NGC.221     0.275      -185
+</pre>
+
+<p>For not being confused, let's use <code>x</code> for representing distance and <code>y</code> for representing radial velocity. We are going to find the slope of the line \(y = H_{0}x\), which is \(H_{0}\). The <code>polyfit</code> function from <em>numpy</em> do this for us:</p>
+
+<pre>
+>>> import numpy as np
+>>> x = df['distance']
+>>> y = df['velocity']
+>>> slope, intercept = np.polyfit(x, y, 1)
+>>> print(slope)
+454.1584409226285
+</pre>
+
+<p>As you see <code>slope</code> is about 454. Let's first plot the dataset points and the regression line and then explain it.</p>
+
+<pre>
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots()
+ax.scatter(x, y, color='blue')
+ax.plot(x, slope*x + intercept, color='red')
+ax.set_xlabel('Distance (Mpc)')
+ax.set_ylabel('Recessional Velocity (km/s)')
+plt.grid()
+plt.show()
+</pre>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/hubble_diagram_original_data.png" alt="Hubble diagram with original data used by Hubble">
+
+<p>Note that the unit of distance is \(Mpc\) and the unit of radial velocity is \(km/s\). So, the unit of \(H_{0}\) should be \((km/s)/Mpc\). The resulting formula should be \(v=454D\). It means that if a galaxy is at 1 \(Mpc\) away from us, it is moving away from us at speed of 454 \(km/s\). The method used by Hubble was correct, but the number he calculated for \(H_{0}\) was NOT correct.</p>
+
+<p>In fact, the expansion of the universe applies only on large scales. By large scale, we mean distances more than 100 \(Mpc\). In short scales, the expansion of the universe does not have any effect on gravitational bounded structures. For example, distances between the stars in our galaxy do not increase by the expansion of the universe. The galaxies sample used by Hubble were all galaxies whose distances were less than 2 Mpc. The major problem in calculating Hubble's constant is the way the distances should be estimated. It was not a simple task in 1920s to calculate distances more than 100 Mpc.</p>
+
+<p>Let's now calculate \(H_{0}\) using a simple and powerful tool created by <em>Centre de données astronomiques de Strasbourg</em>. <a href="http://simbad.u-strasbg.fr/simbad/" target="_blank" rel="noopener">SIMBAD</a> is a database that contains data from a lot of different astronomical catalogs. The most efficient way to retrieve data from this database is using SQL scripts. You can type your scripts directly in the <a href="http://simbad.u-strasbg.fr/simbad/sim-tap" target="_blank" rel="noopener">TAP Service page</a> or you can use <a href="https://pypi.org/project/hypatie/" target="_blank" rel="noopener">hypatie</a> python package to retrieve data.</p>
+
+<p>We're going to use two tables from SIMBAD database: <code>basic</code> and <code>mesDistance</code>. We join these two tables to retrieve distance and redshift for a sample of 1000 galaxies whose distances are higher than 100 Mpc. In order to prevent getting distances in the database which have been estimated from redshift, we need to indicate the method used to calculate distance. In the following SQL script, we've chosen <a href="https://en.wikipedia.org/wiki/Tully%E2%80%93Fisher_relation" target="_blank" rel="noopener">T-F</a> method.</p>
+
+<pre>
+from hypatie.simbad import sql2df
+import numpy as np
+import matplotlib.pyplot as plt
+
+sql = &quot;&quot;&quot;
+SELECT TOP 1000 
+b.rvz_redshift AS z, d.dist AS D
+FROM basic AS b
+JOIN mesDistance as d ON b.oid=d.oidref
+WHERE dist > 100 AND unit='Mpc' AND method='T-F'
+AND rvz_redshift BETWEEN 0 AND 0.1
+&quot;&quot;&quot;
+
+df = sql2df(sql)
+df = df.astype('float')
+
+# Calculate radial velocity
+df['v'] = 299792.458 * df['z']
+
+# Calculate H0
+x = df['d']
+y = df['v']
+slope, intercept = np.polyfit(x, y, 1)
+
+# Plot data and regression line
+fig, ax = plt.subplots()
+ax.scatter(x, y, color='blue', s=1)
+ax.plot(x, slope*x + intercept, color='red')
+ax.set_title('Calculated H0: '+str(round(slope,2))+' (km/s)/Mpc')
+ax.set_xlabel('Distance (Mpc)')
+ax.set_ylabel('Recessional Velocity (km/s)')
+plt.grid()
+plt.show()
+</pre>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/hubble_diagram_simbad.png" alt="hubble diagram with new dataset">
+
+<p>The value we calculated, 51.01, is much more realistic than that calculated by Hubble. According to Planck Mission final results, released in 2018, \(H_{0}=67.66(km/s)/Mpc\) which is higher than what we calculated.</p>
+
+<h2>Hubble Parameter</h2>
+
+<p>The Hubble constant \(H_{0}\), as we've seen, is a proportionality constant that relates distance to radial velocity. But the value of \(H_{0}\) describes the relationship between these two quantities only at the present day. In fact, slope of the regression line in the above diagrams changes with time. This slope is called <em>Hubble parameter</em>, denoted by \(H\), which is a function of time. Thus, the Hubble constant \(H_{0}\) is just the value of \(H\) at the present day.</p>
+
+<p>The Hubble parameter can be written in terms of scale factor:</p>
+
+\[ H = \frac{\dot{a}}{a} \]
+
+<p>In this formula, \(a\) is scale factor, which is a function of time, and \(\dot{a}\) is time derivative of scale factor.</p>
+
+<p>Let's try to plot the diagram of scale factor and Hubble parameter to find out how the geometry of our universe changes with time. I've written <a href="http://astrodatascience.net/index.php/2021/09/02/how-to-calculate-scale-factor/" target="_blank" rel="noopener">another post</a> explaining how to calculate scale factor, but if you are not interested in the details of calculation, you can simply use the function <code>scale_factor</code> from <a href="https://pypi.org/project/hypatie/" target="_blank" rel="noopener">hypatie</a>. We create an instance of <code>Planck18</code> class as our cosmological model. Then we use its <code>scale_factor</code> method which gives us the scale factor as a polynomial function. By creating a range of time points and passing them to the scale factor function, we can find for each moment of time its corresponding scale factor. Note that the <code>scale_factor</code> method needs the time passed to it to be in billion years starting from the Big Bang.</p>
+
+<pre>
+import numpy as np
+import matplotlib.pyplot as plt
+from hypatie import Planck18
+
+cosmo = Planck18()
+a = cosmo.scale_factor()
+t = np.linspace(1e-10, 30)
+
+plt.plot(t, a(t))
+plt.title('Scale Factor')
+plt.xlabel('Time (billion years from Big Bang)')
+plt.ylabel('Hubble Parameter (1/Gyr)')
+plt.grid()
+plt.show()
+</pre>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/scale_factor.png" alt="Scale factor">
+
+<p>For calculating the Hubble parameter, we should create a function by dividing time derivative of scale factor to scale factor. This is a function of time, so, if we give it a moment, it gives us the value of the Hubble parameter at that moment. As we've said before, the value of the Hubble parameter at the present day is the Hubble constant, \(H_{0}\). Let's see what our function gives us if we pass the current age of the universe:</p>
+
+<pre>
+>>> def H(t):
+	return a.deriv(1)(t) / a(t)
+
+>>> H(13.8)
+0.06933802993205697
+</pre>
+
+<p>The result, 0.069, is \(H_{0}\). What does it mean? It means that at the current rate of the expansion, the universe  expands about %7 each one billion years. But why is it so different with values we saw before, like 51 or 67? Because its unit is in \(1/Gyr\). Let's convert it to the conventional unit \((km/s)/Mpc\). If you are lazy in converting units, like me, use <code>astropy.unit</code> module:</p>
+
+<pre>
+>>> from astropy import units as u
+>>> x = (1*u.Unit('1/Gyr')).to('km / (Mpc s)')
+>>> print(x)
+977.7922216807892 km / (Mpc s)
+</pre>
+
+<p>So, each unit of \(1/Gyr\) equals 977.792 units of \((km/s)/Mpc\). Let's convert <code>H</code> to the conventional unit and name the new function <code>H_conv</code> and see what it gives us if we pass the current age of the universe:</p>
+
+<pre>
+>>> def H_conv(t):
+	return 977.7922216807892 * H(t)
+
+>>> print(H_conv(13.8))
+67.79818633423504
+</pre>
+
+<p>As you see, the result is now reasonable. Finally we plot it:</p>
+
+<pre>
+>>> plt.plot(t, H_conv(t))
+>>> plt.title('Hubble Parameter')
+>>> plt.xlabel('Time (billion years from Big Bang)')
+>>> plt.ylabel('Hubble Parameter (km/s)/Mpc')
+>>> plt.ylim(0, 300)
+>>> plt.grid()
+>>> plt.show()
+</pre>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/hubble_parameter.png" alt="Hubble parameter">
+
+<p>Well, you can see the Hubble parameter is decreasing with time. What does it imply? Remember the Hubble's Law and imagine yourself as an observer on the Earth who are looking at a point at a fixed distance \(D\) far away from the Earth. You see galaxies pass this point at velocity \(v=H_{0}D\). After \(n\) billion years, the Hubble parameter will be \(H_{n}\) and you see galaxies passing that point at speed \(v_{n}=H_{n}D\). Since the Hubble parameter is decreasing, \(H_{n} < H_{0}\), you will see that the later galaxies pass the fixed point at lower speed: \(v_{n} < v\).</p>
+
+<p>Be careful not to confuse the accelerating rate of the expansion with the decreasing trend of the Hubble parameter. The expansion of our universe is now accelerating, because the second derivative of scale factor is positive at the present day. You can check it simply by pass the current age of the universe to the second derivative of scale factor:</p>
+
+<pre>
+>>> a.deriv(2)(13.8)
+0.0023715549918029155
+</pre>
+
+<p>As a final word, I should say that one important role of the Hubble parameter is that it appears in the Friedmann equation, which relates the distribution of energy density to the geometry of the universe.</p>
+
+</body>
+</html>

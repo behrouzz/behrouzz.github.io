@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Astronomical Python Packages</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Astronomical Python Packages</h1>
+
+<p>In this page I introduce two kinds of astronomical Python packages. First, the most popular and useful libraries that can be used in astronomical calculations. Second, the libraries that I have created for this reason. I will update this page as I find another useful library or if I create a new library or make major changes in the existing ones. I don't mention here general packages such as <code>pandas</code>, <code>numpy</code>, <code>matplotlib</code>, <code>scipy</code>, <code>sklearn</code> and <code>keras</code>, as you can easily find a lot of tutorials about them on the Internet. All the packages I introduce in this page can be installed using <code>pip</code> package manager.</p>
+
+<h2>Popular Libraries</h2>
+
+<p>There are an increasing number of astronomical python packages and I can't and don't want to introduce all of them. I'm going to talk about just the most important one, <em>astropy</em> which is essential and indispensable for astronomical data science. I also mention a few libraries that can be helpful.</p>
+
+<h3>astropy</h3>
+
+<p>I've never seen an astronomical library more comprehensive than <a href="https://www.astropy.org/" target="_blank" rel="nofollow noopener">astropy</a>. It is created by great teams and is very well <a href="https://docs.astropy.org/en/stable/index.html" target="_blank" rel="nofollow noopener">documented</a>. It consists of several modules for dealing with time, coordinates, tables, quantities, models, etc. Some of its functionalities make your everyday life really easy, such as using constants, unit conversions and handling FITS files.</p>
+
+<p>Let me show you just a few of its general applications in everyday life. Physical quantities have two parts: <em>unit</em> and <em>value</em>. For example, when we say that the speed of light in vacuum is 299792458 m/s, we are talking about a quantity, speed, which has two parts: its unit is <em>metres per second</em> and its value is <em>299792458</em>. You can define create this quantity in astropy as follow:</p>
+
+<pre>
+>>> from astropy import units as u
+>>> speed = 299792458 * u.Unit('m/s')
+>>> print(speed)
+299792458.0 m / s
+</pre>
+
+<p>One advantage of creating quantities with units, is that you can convert them to other units using <code>.to()</code> method. Let's find the speed of light in km/h:</p>
+
+<pre>
+>>> print(speed.to('km/h'))
+1079252848.8 km / h
+</pre>
+
+<p>Another useful module in astropy is <code>constants</code>. Let me show it with an example. We want to find the Newtonian gravitational force between the Earth and the Sun:</p>
+
+\[ F = G \frac{M_{earth} \times M_{sun}}{r^{2}}\]
+
+<p>We can create each of these quantities as explained above, but the <code>constants</code> module have already defined them and I we have to do is importing them from this module:</p>
+
+<pre>
+>>> from astropy.constants import G, M_earth, M_sun, au
+>>> f = G * (M_earth * M_sun) / au**2
+>>> print(f)
+3.541545424043141e+22 kg m / s2
+</pre>
+
+<p>The resulting unit is <code>kg m / s2</code> which is newton. Remember \(F=m a\), or if you want to be sure convert it to newton directly with <code>.to()</code> method:</p>
+
+<pre>
+>>> print(f.to('N'))
+3.541545424043141e+22 N
+</pre>
+
+<p>You can find other useful constants <a href="https://docs.astropy.org/en/stable/constants/index.html#module-astropy.constants" target="_blank" rel="nofollow noopener">here</a>.</p>
+
+<h3>astroquery</h3>
+
+<p>The most popular python package for querying astronomical databases is certainly <a href="https://astroquery.readthedocs.io/en/latest/" target="_blank" rel="nofollow noopener">astroquery</a>, which is a coordinated package of <em>astropy</em>. There are a large number of web forms and databases supported by this library. Maybe the most important feature of this package is the compatibility of its data formats with <em>astropy</em>, as in the case of tables, units and etc.</p>
+
+<h3>astroplan</h3>
+
+<p>Another <em>astropy</em> compatible library is <a href="https://astroplan.readthedocs.io/en/latest/" target="_blank" rel="nofollow noopener">astroplan</a>. It can be useful for those who are interested in observational astronomy.</p>
+
+<h3>astroML</h3>
+
+<p>This python package has come with a nice textbook which explains step-by-step useful methods and technics you can use in astronomical analysis. The package helps you specially in creating machine learning models. There are a lot of interesting datasets you easily download using <code>astroML.datasets</code> module.</p>
+
+<h2>Our own libraries</h2>
+
+<p>As an astro data scientists, you may find that you are repeating some procedures that you can't find already implemented in a published library. You may also encounter a situation that think the existing implementations are not sufficiently efficient for what you want to do. In these cases you decide to create and publish your own library. This is the reason why I have created the following libraries.</p>
+
+<h3>hypatie</h3>
+
+<p>My initial object when I created <a href="https://pypi.org/project/hypatie/" target="_blank" rel="nofollow noopener">this package</a> was retrieving data from NASA's <a href="https://ssd.jpl.nasa.gov/?horizons" target="_blank" rel="nofollow noopener">JPL HORIZONS System</a>, which is a great tool for getting positions and velocities of the solar sytem objects. It has been implemented in <code>horizons</code> module. This module has two classes, <code>Vector</code> and <code>Observer</code>, to return positions. I have given examples of using this module <a href="https://github.com/behrouzz/hypatie/blob/main/README.md" target="_blank" rel="nofollow noopener">here</a>.</p>
+
+<p>Another useful module is <code>catalogues</code> that can be used to retrieve data from a specific catalog. There's a python dictionary in this module which returns name and decription of existing astronomical catalogs in the current version of the package. First, you have to create an instance of the <code>Catalogue</code> class, by passing the catalog's name. There are some optional arguments as well: <code>columns</code> determine which columns should be returned, <code>n_max</code> is the maximum number of rows to be returned, <code>where</code> and <code>order_by</code> as used as SQL clauses. Once you've created an instance of the class, you can access its attributes and methods. Use <code>columns</code> attribute to find out which columns will be returned in the current instance. To know all possible columns in the table, use <code>available_columns()</code> method. Finally, use <code>download()</code> method to retrieve data from the server.</p>
+
+<p>Let's get data of very bright objects, whose apparent magnitude is less than 1, from the <a href="https://en.wikipedia.org/wiki/Hipparcos" target="_blank" rel="nofollow noopener">Hipparcos Catalog</a>:</p>
+
+<pre>
+>>> import hypatie as hp
+>>> hip = hp.Catalogue(name='hipparcos', where='Vmag &amp;amp;gt; 1')
+>>> data, meta = hip.download()
+>>>
+>>> data.shape
+(15, 12)
+>>>
+>>> data.head()
+     HIP    _RA_icrs   _DE_icrs  Vmag  ...    B-V  Period  HvarType    SpType
+0  24608   79.172329  45.997991  0.08  ...  0.795     NaN         U  M1: comp
+1  69673  213.915300  19.182410 -0.05  ...  1.239     NaN         U    K2IIIp
+2  91262  279.234735  38.783692  0.03  ... -0.001     NaN         U    A0Vvar
+3  32349  101.287155 -16.716116 -1.44  ...  0.009     NaN         U    A0m...
+4  37279  114.825493   5.224993  0.40  ...  0.432     NaN              F5IV-V
+
+[5 rows x 12 columns]
+</pre>
+
+<p>The <code>cosmology</code> has a parent classes, <code>CosModel</code>, to help you create a cosmological model of universe. To use the standard model with predefined data from Planck 2018 data release, you can create an instance of <code>Plank18</code>, which is a child class of <code>CosModel</code>. You can find several examples of using this module in some of our blog posts, such as <a href="https://astrodatascience.net/hubbles-law/" target="_blank" rel="noopener">Hubble's Law</a> and <a href="https://astrodatascience.net/how-to-calculate-scale-factor/" target="_blank" rel="noopener">How to calculate Scale Factor</a>.</p>
+
+<p>Some useful function have been created in <code>transform</code> module that can help you in coordinate transformations. Two important functions in this module are <code>radec_to_altaz</code> and <code>altaz_to_radec</code> to transform between <em>ICRS</em> and <em>Altitude-Azimuth</em> coordinates.</p>
+
+<p>The package will be updated and you can find out the version you've installed by calling <code>__version__</code>. There is still much task to be implemented, and of course, pull requests are welcome.</p>
+
+<h3>sdss</h3>
+
+<p>If you're interested in deep-sky astronomy, you should learn how to retrieve data from <a href="https://www.sdss.org/" target="_blank" rel="nofollow noopener">Sloan Digital Sky Survey</a>. There are different ways for this reason, but <a href="https://pypi.org/project/sdss/" target="_blank" rel="nofollow noopener">sdss</a> python package has made it really simple for you. I've written a series of posts on this topic, so here I don't go into details. You can create a <code>Region</code> class by passing the coordinates of its center and a field of view to get the image of that part of the sky. You can also find different kinds of objects in that region. </p>
+
+<p>There are also two other essential classes, <code>PhotoObj</code> and <code>SpecObj</code>. Each of theses object can be created by passing <code>objID</code> and <code>specObjID</code>, repectively. You can start learning about SDSS along with using the <a href="https://pypi.org/project/sdss/" target="_blank" rel="nofollow noopener">sdss</a> python package <a href="introduction-to-sdss.html" target="_blank" rel="noopener">here</a>.</p>
+
+<h3>stelspec</h3>
+
+<p>You should know <a href="http://www.obs-hp.fr/archives.shtml" target="_blank" rel="nofollow noopener">ELODIE/SOPHIE archives</a> if you're interested in stellar spectroscopy. These archives, provided by <em>Observatoire de Haute-Provence</em>, consist of spectra of stars recorded across time and are presented in FITS format. The <a href="https://pypi.org/project/stelspec/" target="_blank" rel="nofollow noopener">stelspec library</a> makes it easy to access data and download spectrum of stars from these archives.</p>
+
+<p>To get data from each of these archives, you should create an instance of the archive's corresponding class, <code>Elodie</code> or <code>Sophie</code> by passing star's name. Once you've created an instance, you have access to its methods. Currently, there are three methods: <code>.ccf()</code>, <code>.spec()</code> and <code>.get_spec()</code>. Each of the first two methods returns a table as pandas DataFrame, <em>Cross-Correlation Functions table</em> and <em>Spectra table</em>. The third method, <code>.get_spec()</code>, downloads a FITS file, which is one of the available spectra of the star. You should determine which one should be returned by passing required arguments to this method.</p>
+
+<p>Let's say we want to see available spectra of the star <em>HD217014</em> in the ELODIE archive and download one of them. We create an instance of <code>Elodie</code> and use <code>.ccf()</code> to see existing spectra.</p>
+
+<pre>
+>>> from stelspec import Elodie
+>>> el = Elodie('HD217014')
+>>> ccf = el.ccf()
+>>> ccf.shape
+(153, 12)
+>>>
+>>> ccf.head()
+   datenuit imanum  imatyp         jdb  ...    vfit sigfit  ampfit  ctefit
+0  19940914   0022  OBTH    49610.5268  ... -33.260  4.800  0.1738  0.9996
+1  19940916   0017  OBTH    49612.4657  ... -33.229  4.802  0.1737  0.9997
+2  19941027   0008  OBTH    49653.2973  ... -33.226  4.768  0.1739  0.9995
+3  19941029   0009  OBTH    49655.3067  ... -33.286  4.773  0.1754  0.9999
+4  19950110   0007    OBTH  49728.2289  ... -33.321  4.764  0.1764  0.9990
+
+[5 rows x 12 columns]
+</pre>
+
+<p>As you see, there are 153 spectra for this star in the ELODIE archive. The date and exact time that each spectrum has been recorded are given in <code>datenuit</code> and <code>jdb</code> columns, respectively. The radial velocity calculated from each spectrum is given in <code>vfit</code> column. To download a spectrum you should pass its <code></code> and <code>datenuit</code> to <code>imanum</code>. Let's download the first spectrum to the working directory:</p>
+
+<pre>
+>>> # download spectrum as FITS file
+>>> el.get_spec(19940914, '0022')
+</pre>
+
+<h3>gravitational</h3>
+
+<p>If you're interested in astrodynamics, you can try <a href="https://pypi.org/project/gravitational/" target="_blank" rel="nofollow noopener">gravitational</a> python pachakge, wich is a <em>N-body simulation</em> library. You should first create an instance of the <code>Simulation</code> class, then create body objects using <code>add_body</code> method. Finally, you can you use <code>run</code> method to run the simulation, or just use <code>play</code> method to show the animated simulation.</p>
+
+<pre>
+from gravitational.simulation import Simulation
+
+# create Simulation object
+sim = Simulation()
+
+# Add first body
+b1 = sim.add_body(name='Star',
+                  color='y',
+                  size=25,
+                  mass=2e30,
+                  position=(0, 0),
+                  velocity=(0, 0))
+
+# Add second body
+b2 = sim.add_body(name='Planet',
+                  color='b',
+                  size=10,
+                  mass=6e24,
+                  position=(1.5e11, 0.5e11),
+                  velocity=(0, 20000))
+
+# play the simulation
+sim.play(dim='2d', path=True)
+</pre>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/gravitational_ex1.gif" alt="N-body simulation with python">
+
+<p>You can add as many bodies as you wish to the simulation. The <code>Simulation</code> has some useful mehtods that can help you in astrodynamics calculations and simulations. Fr example, by passing two body objects to <code>set_orbit</code> method, it will change the velocity of the small body in order to set it in the orbit of the larger body. Another method, <code>set_lagrange</code>, helps you to put a body (such as a sattelite) in one of the five lagrangian points of another body (a planet for axample), with respect to a third body (such as a star).</p>
+
+
+</body>
+</html>

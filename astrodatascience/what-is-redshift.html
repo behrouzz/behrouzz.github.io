@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>What is redshift?</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+<body>
+
+<h1>What is redshift?</h1>
+
+<p>Before the twentieth century, scientists didn’t know that our universe is expanding. The expansion of the universe has been discovered in 1920s and redshift played a key in this great discovery. I show you in this post what exactly redshift is by giving an example. But before explaining redshift, we should two fundamental concepts: <i>black body radiation</i> and <i>spectral lines</i>.</p>
+
+<h2>Black body radiation</h2>
+
+
+<p>A <i>black body</i> is defined as an idealized object which absorbs all incident radiation. The radiation of the object depends only on its temperature. In a given temperature, the amount of electromagnetic radiation emitted by the body, is not equal in different wavelength. The amount of electromagnetic radiation emitted by a black body at temperature \(T\) can be found with Planck’s law:
+
+  \[B(\lambda, T) = {2hc^2 \over \lambda^5} {1 \over e^{hc/\lambda k T}-1}\]
+
+where, \(B\) is spectral radiance, \(h\) is Planck constant, \(c\) is speed of light, \(k\) is Boltzmann constant, \(\lambda\) is wavelength of the electromagnetic radiation, and \(T\) is absolute temperature of the black body.</p>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/back_body.png" alt="Black body radiation">
+
+<p>The above chart shows radiation for a black bodies as three different temperatures: 3000K, 4000K and 5000K. You can find <a href="https://github.com/behrouzz/astrodatascience/blob/main/codes/black_body.py">here</a> the python code used to create the above chart. There are two important things to note in this picture. First, the amount of radiation emitted by an object in higher temperature is more than the amount of radiation emitted by an object in lower temperature.Second, the peak of the radiation for an object in higher temperature occurs in shorter wavelengths, as compared with an object in lower temperature.</p>
+
+<h2>Spectral lines</h2>
+
+<p>Stars can be considered as black bodies. We can record the electromagnetic radiation emitted by a star using a spectroscope. The resulting diagram is called <em>spectrum</em>, which shows the amount of emitted radiation in different wavelengths. If you are not familiar with spectroscopy, I recommend <a href="https://webbtelescope.org/resource-gallery/articles/pagecontent/filter-articles/spectroscopy-101--introduction">these collection of articles</a> on spectroscopy provided by the website of James Webb Space Telescope.</p>
+
+<p>The following picture taken from <a href="http://skyserver.sdss.org/dr16/en/proj/basic/spectraltypes/stellarspectra.aspx">SDSS SkyServer</a> shows the spectrum of a typical star. You can see two types of deviation from the ideal black body spectrum. First, the noise which can be ignored. Second, there are absorption/emission lines which follow specific patterns and we should not ignore them because there are extremely useful pieces of information in them.</p>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/sdss_spectrum_example.jpg" alt="spectrum of a typical star">
+
+<p>Imagine a star who has a lot of hydrogen atoms in its photosphere. The star emits photons in full range of wavelengths,  but the cold hydrogen atoms in the photosphere of star will absorb some of these photos. Photons whose wavelengths equal exactly with energy level difference in the hydrogen atom will be absorbed. So, in the spectrum, we will receive lower amount of light in these wavelengths compared with the nearby wavelengths. The result is appearing of <em>absorption lines</em> which are narrow downward lines in the spectrum. Each line corresponds to a specific energy levels of an atom. If an exited material, such as hydrogen or helium, returns to a lower energy state, it emits photos which will be appeared as <em>emission lines</em> in the spectrum. The emission lines are very common in the spectra of galaxies and quasars.</p>
+
+<h2>Redshift</h2>
+
+<p>The spectral lines are finger prints that tell us which material, element or molecule, exist in the object. Since we know the exact wavelength of each line, by analyzing the spectrum of a celestial object we can find which materials are there in that object. But that is not all the story. In cosmology, we use the spectra to calculate an interesting quantity, called <em>red shift</em>. Let's show this with an example.</p>
+
+<p>We want to analyze the spectrum of a galaxy to show you what exactly redshift means. The ID of the galaxy in the SDSS catalog is 320932083365079040. We can simply use <a href="https://pypi.org/project/sdss/">sdss python package</a> with the following code to view the spectrum.</p>
+
+<pre>import sdss
+
+sp = sdss.SpecObj(320932083365079040)
+
+sp.show_spec()
+</pre>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/sp_320932083365079040.gif">
+
+<p>In the middle right of the spectrum, you can see a strong upward emission line which is called \(H_{\alpha}\) line. This line appears when electron in hydrogen atom transits from the third to the second energy level. The difference between these two energy levels is 1.89 eV which corresponds to a wavelength of 6564.614 Angstrom. But as you see in the picture, the \(H_{\alpha}\) line is not there. It is at 7187.401 Angstrom. For a better analysis, I have created the same spectrum in the following picture to concentrate our attention only on the \(H_{\alpha}\) line. You can find the source code used to creating the spectrum <a href="https://github.com/behrouzz/astrodatascience/blob/main/codes/redshift_h_alpha.py">here</a>.</p>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/redshift_h_alpha.png">
+
+<p>The blue dashed line in the above picture, labeled as <em>emitted</em>, shows the original wavelength of \(H_{\alpha}\). If you analyse the spectrum of a material in a laboratory on Earth, the \(H_{\alpha}\) line should be there. But in the sky everything can be different! Since the galaxy is moving away from us, the light that we receive from it, is subjected to <em>Doppler effect</em>. According to Doppler effect, if an object is moving away from us, we will receive its light in longer wavelengths. This is why the \(H_{\alpha}\) has shifted from 6564.614 Angstrom to 7187.401 Angstrom. The first number is the observed wavelength often denoted as \(\lambda_{obs}\) and shown in the picture with the vertical blue dashed line. The second number is the emitted wavelength often denoted as \(\lambda_{emit}\) and shown in the picture with the vertical red dashed line. Redshift, denoted by the letter \(z\), is defined as follow:</p>
+
+\[ z = \frac{\lambda_{obs} - \lambda_{emit}}{\lambda_{emit}} \]
+
+<p>Applying this formula to our example, we can find the redshift:</p>
+
+\[ z = \frac{7187.401 - 6564.614}{6564.614} = 0.095 \]
+
+<p>For an object which is moving away from us, the redshift is positive and for an object which is approaching us, the redshift is negative. The velocity of the object relative to us, can be easily found by multiplying its redshift by the speed of light:</p>
+
+\[ v = c \times z \]
+
+<p>Applying the formula to the galaxy of our example:</p>
+
+\[ v = 299792458 \times 0.095 = 28480283.51 \]
+
+<p>So, this galaxy is moving away from us with a speed about 28480 km/s.</p>
+
+<h2>Redshift and Scale Factor</h2>
+
+<p>When we look at the sky, we are looking at the past. Cosmologists usually use redshift to indicate a moment in the cosmological time, or a distance in the space. When we say \(z=0.095\), we are indicating a moment at which, an object with this redshift has emitted the light that we are receiving now. At the same time, we are indicating its position relative to use, caused by the expansion of the universe.</p>
+
+<p>There is a closely related concept that appears in the cosmological model, called <em>scale factor</em>. Let me explain it with an example. If we consider our distance to a galaxy to be 1 unit at the present time, at a certain moment in the future, our distance will be 1.5 unit because of the expansion of the universe. Similarly, the was a moment in the past, when our distance wan 0.5 unit. In the first case, the scale factor is 1.5 and in the second case it is 0.5. The scale factor at the present time is 1.</p>
+
+<p>The relation between redshift and scale factor is given by the following formula:</p>
+
+\[ 1+z = \frac{1}{a} \]
+
+<p>Applying to our example:</p>
+
+\[ a = \frac{1}{1+0.095} = 0.913 \]
+
+<p>It means the the light we've received from the galaxy, has been emitted by the galaxy at a moment when the scale factor of the universe was 0.913.</p>
+
+<h2>Redshift and Distance</h2>
+
+<p>According to <em>Hubble's law</em>, there is a linear relation between the recessional velocity of an object, caused by the expansion of the universe, and its distance. In other words, galaxies are moving away from each other at a speed proportional to their distances.</p>
+
+\[ v = H_{0}D \]
+
+<p>In the above formula, \(v\) is the recessional velocity, \(D\) is the proper distance, and \(H_{0}\) is <em>Hubble's constant</em>. According to <a href="https://en.wikipedia.org/wiki/Planck_(spacecraft)#2018_final_data_release">Planck Mission final results</a>, released in 2018, the value of Hubble's constant is 67.66 \(km/s/Mpc\). It means that if a galaxy is at 1 \(Mpc\) away from us, it is moving away from us at speed of 67.66 \(km/s\). Replacing \(v\) in the above formula with \(cz\), as we've seen before, we will find the relationship between redshift and proper distance:</p>
+
+\[ c z = H_{0}D \]
+
+<p>Applying to the galaxy of our example, we can find it's distance:</p>
+
+\[ D = \frac{c \times 0.095}{H_{0}} = 420.932 Mpc \]
+
+<p>Cool! Let's review what we've done. First, we calculated the redshift with comparing the observed wavelength of \(H_{\alpha}\) line with it's rest wavelength as we knew before. We found that the redshift of the galaxy is 0.095. Then, we calculated its recessional velocity to be 28480 \(km/s\), meaning that it is moving away from us at this speed. Finally, by calculating it's proper distance, we found that it is at 420.932 \(Mpc\), or 1.373 giga light years, away from us.</p>
+
+</body>
+</html>

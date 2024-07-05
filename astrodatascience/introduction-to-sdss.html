@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Introduction to SDSS</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Introduction to SDSS</h1>
+
+<p>The Sloan Digital Sky Survey (SDSS) is one of the greatest deep-sky surveys ever made. It has been launched by *Apache Point Observatory* in New Mexico, United States. Here, I'm going to introduce briefly some basic concepts needed to work with the rest of our tutorial. For a complete description, visit <a href="https://www.sdss.org/" target="_blank" rel="noopener">SDSS website</a>.</p>
+
+<h2>SDSS sky coverage</h2>
+
+<p>Each survey has its own sky coverage. While some surveys may cover the full sky, most surveys cover only a part of the sky. Of course a telescope based on a certain location on the Earth can not see the whole sky. One possibility to find the coverage of surveys is to use the <a href="http://alasky.unistra.fr/MocServer/query">CDS MOCServer</a>. We want to find if there are any MOCs (Multi-Order Coverage maps) related to the SDSS data releases. The <code>astroquery.cds</code> package has made this really simple:</p>
+
+<pre>
+from astroquery.cds import cds
+import astropy.units as u
+
+tbl = cds.find_datasets(meta_data='ID=*sdss*', fields=['ID'])
+
+print(tbl)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+               ID               
+--------------------------------
+                CDS/II/259/sdss3
+                CDS/II/267/sdss4
+                CDS/II/276/sdss5
+                CDS/II/282/sdss6
+                CDS/II/294/sdss7
+                CDS/II/306/sdss8
+        CDS/J/A+A/544/A81/snsdss
+     CDS/J/A+A/569/A124/guv_sdss
+     CDS/J/A+A/597/A134/psb_sdss
+         CDS/J/AJ/143/52/sdss_cl
+                             ...
+sdss.jhu/services/siapdr4-images
+sdss.jhu/services/siapdr5-images
+sdss.jhu/services/siapdr7-images
+sdss.jhu/services/siapdr8-images
+sdss.jhu/services/siapdr9-images
+      wfau.roe.ac.uk/sdssdr3-dsa
+      wfau.roe.ac.uk/sdssdr5-dsa
+      wfau.roe.ac.uk/sdssdr6-dsa
+      wfau.roe.ac.uk/sdssdr7-dsa
+      wfau.roe.ac.uk/sdssdr8-dsa
+      wfau.roe.ac.uk/sdssdr9-dsa
+Length = 98 rows
+</pre>
+
+<p>It has found 98 MOCs. Let's take the example of the data release 6 and download the corresponding MOC. The <code>find_datasets</code> function retrieve the requested data from the MOCServer. If you set the argument <code>return_moc</code> to <code>True</code>, the function will return the data as a MOC object. Note that we should pass the <code>ID</code> to the <code>meta_data</code> argument.</p>
+
+<pre>
+moc = cds.find_datasets(meta_data='CDS/II/282/sdss6',
+                        return_moc=True)
+</pre>
+
+<p>Now, if you want to find if a certain point is covered by the returned MOC, you can simply pass it to the <code>contains</code> method. Let's see if the following points have been covered in the SDSS sixth data release or not.</p>
+
+<pre>
+print(moc.contains(ra=0*u.deg, dec=0*u.deg))
+print(moc.contains(ra=10*u.deg, dec=80*u.deg))
+</pre>
+
+<p>Output:</p>
+
+<pre>
+[ True]
+[False]
+</pre>
+
+<p>So, we can see that the first point is in the coverage but the second one is not. To plot the coverage of the MOC, we should use the <code>mocpy</code> package. I will write another post about it in the future, but for now let's just see what the following code gives us.</p>
+
+<pre>
+import matplotlib.pyplot as plt
+from astropy.coordinates import SkyCoord, Angle
+from mocpy import World2ScreenMPL
+
+fig = plt.figure(111)
+
+wcs = World2ScreenMPL(fig=fig,
+                      fov=360*u.deg,
+                      center=SkyCoord(180, 0, unit='deg'),
+                      coordsys=&quot;icrs&quot;,
+                      rotation=Angle(0, u.deg),
+                      projection=&quot;MOL&quot; #AIT
+                      ).w
+
+ax = fig.add_subplot(1, 1, 1, projection=wcs)
+
+moc.fill(ax=ax, wcs=wcs, alpha=0.5, fill=True, color=&quot;red&quot;)
+moc.border(ax=ax, wcs=wcs, alpha=0.5, color=&quot;black&quot;)
+
+plt.grid(color=&quot;black&quot;, linestyle=&quot;dotted&quot;)
+plt.show()
+</pre>
+
+<div style="text-align: center;">
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/moc_sdss6.png">
+</div>
+
+<p><br></p>
+
+<p>The most basic types of data collected by the SDSS are <i>photometric</i> and <i>spectroscopic</i> data. In this article we only talk about these two types.</p>
+
+<h2>Photometric data</h2>
+
+<p>The photometric data is collected by a special type of <a href="https://www.sdss.org/instruments/camera/" target="_blank" rel="noopener">camera</a> that is equipped with 30 CCDs arranged in six columns and five rows.</p>
+
+<div style="text-align: center;">
+<img src="https://www.sdss.org/wp-content/uploads/2014/11/faceplat2.jpg" style="padding: 5px 15px 10px 10px;">
+</div>
+
+<p>Each row of the camera uses a different filter. The center wavelengths of these filters are presented in table below. For a better understanding, you can compare them with the wavelengths of the visible light.</p>
+
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+th {
+  background-color: #96D4D4;
+}
+th, td {
+  padding-left: 15px;
+}
+table.center {
+  margin-left: auto; 
+  margin-right: auto;
+}
+</style>
+</head>
+<body>
+
+<table class="center" style="width:50%">
+  <tr>
+    <th>NAME</th>
+    <td><b>u</b></td> 
+    <td><b>g</b></td>
+    <td><b>r</b></td> 
+    <td><b>i</b></td>
+    <td><b>z</b></td>
+  </tr>
+  <tr>
+    <th>COLOR</th>
+    <td>Ultraviolet</td>
+    <td>Green</td>
+    <td>Red</td>
+    <td>Near-Infrared</td>
+    <td>Infrared</td>
+  </tr>
+
+  <tr>
+    <th>WAVELENGTH</th>
+    <td>3543</td>
+    <td>4770</td>
+    <td>6231</td>
+    <td>7625</td>
+    <td>9134</td>
+  </tr>
+</table>
+
+</body>
+
+<div style="text-align: center;">
+<img src="http://skyserver.sdss.org/dr16/en/proj/basic/color/images/spectrum.jpg">
+</div>
+
+<p>The process of scanning the sky occurs with very slow movement of the camera along its columns. Therefore, the CCDs in each column capture the same image but in five different filters.</p>
+
+<h3>Photometric data terminology</h3>
+
+<p>A <b>strip</b> is a scan along a line of constant survey latitude. The fraction of a strip observed at one time is a <b>run</b>. A <b>camcol</b> (camera column) is the output of one camera column of CCDs as part of a Run. A <b>field</b> is a part of a camcol that is processed by the <em>Photo pipeline</em> at one time. Fields are 2048 × 1489 pixels; a field consists of the frames in the 5 filters for the same part of the sky. For a brief description see <a href="http://skyserver.sdss.org/dr16/en/tools/getimg/getimghome.aspx" target="_blank" rel="noopener">here</a> and for a more technical description see <a href="https://www.sdss.org/dr16/help/glossary/" target="_blank" rel="noopener">here</a>.</p>
+
+<p>If you have <em>run</em>, <em>camcol</em> and <em>field</em> of an image, you can see it via a tool called <a href="http://skyserver.sdss.org/dr16/en/tools/getimg/fields.aspx" target="_blank" rel="noopener">Get Fields</a>. But we may not always know these parameters.</p>
+
+<p>The SDSS team has assigned a unique ID to each object in the sky called <b>ObjID</b>. If you know already the <em>ObjID</em> of an object, you can easily find some of the parameters mentioned above using <code>decode_objid</code> function. For example, we want to find the parameters of an object whose <em>ObjID</em> is 1237648720693755918:</p>
+
+<pre>
+import sdss
+dc = sdss.decode_objid(1237648720693755918)
+print(dc)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+{'version': 2,
+ 'rerun': 301,
+ 'run': 756,
+ 'camcol': 2,
+ 'first_field': 0,
+ 'field': 427,
+ 'id_within_field': 14}
+</pre>
+
+<h3>Querying photometric data</h3>
+
+<p>All types of data are stored in a database is SDSS server. Although there are several web-based tools to access data, the most efficient way, sometimes the only way, is to use SQL query. You can type your query in the <a href="http://skyserver.sdss.org/dr16/en/tools/search/sql.aspx" target="_blank" rel="noopener">SQL Search</a> page directly, or in a pythonic way, you can use the <code>sql2df</code> function from the <b>sdss</b> python package. Anyway, you should use the <a href="http://skyserver.sdss.org/dr16/en/help/browser/browser.aspx" target="_blank" rel="noopener">Schema Browser</a> to find tables from which you want to retrieve data and their columns.</p>
+
+<p>The photometric data are essencially stored in a table called <a href="http://skyserver.sdss.org/dr16/en/help/browser/browser.aspx#&amp;&amp;history=description+PhotoObj+V" target="_blank" rel="noopener">PhotoObj</a>. As an example, imagine that you want to find IDs, coordinates, types and magnitudes of objects whose apparent magnitude in g-band is between 0 and 6:</p>
+
+<pre>
+SELECT objID, ra, dec, type, u, g, r, i, z
+FROM PhotoObj
+WHERE g BETWEEN 0 AND 6
+</pre>
+
+<p>Since most of the SDSS targets have very high magnitudes (even higher than 20), the above query will return only 12 rows. But be careful when asking for huge data! I will show you how big is this database. You can use, for instance, <code>TOP 10</code> to limit maximum number of rows returned up to 10.</p>
+
+<pre>
+SELECT TOP 10 objID, ra, dec, type, u, g, r, i, z
+FROM PhotoObj
+</pre>
+
+<p>Now, let's see how many objects are there in the <a href="http://skyserver.sdss.org/dr16/en/help/browser/browser.aspx#&amp;&amp;history=description+PhotoObj+V" target="_blank" rel="noopener">PhotoObj</a> table. We use <code>sql2df</code> function from <a href="https://pypi.org/project/sdss/" target="_blank" rel="noopener">sdss python package</a>. This function accepts a SQL query as string and returns a pandas DataFrame.</p>
+
+<pre>
+sql = &quot;SELECT COUNT(*) AS num_obj FROM PhotoObj&quot;
+df = sdss.sql2df(sql)
+print(df)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+     num_obj
+0  794328715
+</pre>
+
+<p>You can see that there are about 800 million objects in this table! This is really huge. What are these objects? To find out, we should look at <em>type</em> column of the table. Let's see how many groups exist and how many objects belong to each group.</p>
+
+<pre>
+sql = &quot;&quot;&quot;
+SELECT COUNT(*) AS num_obj, type
+FROM PhotoObj
+GROUP BY type
+&quot;&quot;&quot;
+
+df = sdss.sql2df(sql)
+print(df)
+</pre>
+
+<p>Output:</p>
+
+<pre>     num_obj type
+0      50229    0
+1  366339137    3
+2  427939349    6
+</pre>
+
+<p>As you see in the results, there are three <em>types</em>: 0, 3 and 6. These are value codes: 0 for UNKNOWN, 3 for GALAXY, 6 for STAR. So, it seems that most of the objects are stars. But this is just a classification based on the photometric data. It can be incorrect since the photometric data of a star and a quasar could be similar. For a more accurate classification we need the spectrum of an object. We will discuss this later.</p>
+
+<p>For now, let's recode our DataFrame by replacing the value codes with the names of each <em>type</em> and then calculate the percentage of each type. But before, we need to convert the data types of the columns of our DataFrame (which are initially <code>str</code>) to <code>int</code>.</p>
+
+<pre>
+df = df.astype(int)
+df.loc[df['type']==0, 'type'] = 'UNKNOWN'
+df.loc[df['type']==3, 'type'] = 'GALAXY'
+df.loc[df['type']==6, 'type'] = 'STAR'
+df['percent'] = 100 * df['num_obj'] / df['num_obj'].sum()
+print(df)
+</pre>
+
+<p>Output:</p>
+
+<pre>     num_obj     type    percent
+0      50229  UNKNOWN   0.006323
+1  366339137   GALAXY  46.119337
+2  427939349     STAR  53.874340
+</pre>
+
+<p>Now, it's easier to see that about %46 of objects are of <em>type</em> GALAXY, and about %54 of objects are of <em>type</em> STAR.</p>
+
+<h2>Spectroscopic data</h2>
+
+<p>SDSS collects two major types of spectra: one-dimensional and two-dimensional. Here, I'm going to talk about the 1D spectra.</p>
+
+<p>The spectrum of an object can be identified with three numbers: <em>Plate</em>, <em>MJD</em> and <em>FiberID</em>. The reason behind these numbers is that the SDSS records spectra using aluminum plates placed at focal plane of the telescope. Each plate has a unique <code>plate</code> number and it is connected to the spectroscope via 1000 optical fibers. Each optical fiber transmits the light of one object to the spectroscope and is identified by a unique <code>fiber_id</code>. The date at which the spectrum has been recorded is identified with <code>mjd</code>, which is the <a href="https://scienceworld.wolfram.com/astronomy/ModifiedJulianDate.html" target="_blank" rel="noopener">Modified Julian Date</a>.</p>
+
+<p>Another way that SDSS identifies the spectrum of an object is by an identifier number, called <b>SpecObjID</b>. If you know <em>SpecObjID</em> of an object, you can find the above mentioned parameters using <code>decode_specid</code> function of <a href="https://pypi.org/project/sdss/" target="_blank" rel="noopener">sdss python library</a>:</p>
+
+<pre>
+dc = sdss.decode_specid(320932083365079040)
+print(dc)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+{'plate': 285, 'fiber_id': 184, 'mjd': 51930, 'run2d': 26}
+</pre>
+
+<p>Note that <em>SpecObjID</em> is different from <em>ObjID</em>. We should use <em>ObjID</em> when we need the photometric data of an object, and <em>SpecObjID</em> for spectrometric data. In fact, the number of photometric objects are much higher than spectrometric objects. It means that for most of the objects, there is no spectrometric data. We will discuss this later.</p>
+
+<h3>Querying spectroscopic data</h3>
+
+<p>The spectroscopic data is essetially stored in <a href="http://skyserver.sdss.org/dr16/en/help/browser/browser.aspx#&amp;&amp;history=description+SpecObj+V" target="_blank" rel="noopener">SpecObj</a> table of SDSS database. Let's say we want to retrieve <em>specObjID</em>, <em>ObjID</em>, <em>mjd</em>, <em>plate</em>, <em>fiberID</em> and <em>z</em> (redshift) for the first five rows of this table. In this table, <em>ObjID</em> is stored as <em>bestObjID</em> column name.</p>
+
+<pre>
+sql = &quot;&quot;&quot;SELECT TOP 5
+specObjID, bestObjID, mjd, plate, fiberID, z
+FROM SpecObj&quot;&quot;&quot;
+
+df = sdss.sql2df(sql)
+print(df)
+</pre>
+
+<p>Output:</p>
+
+<pre>             specObjID            bestObjID    mjd plate fiberID              z
+0  3154868093696632832  1237663268796432489  54326  2802     351  -0.0001514952
+1  3154870567597795328  1237663268796432699  54326  2802     360  -6.223064E-05
+2  3154870017841981440  1237663268796497989  54326  2802     358  -8.696781E-05
+3  3154868918330353664  1237663268796498001  54326  2802     354  -0.0003906398
+4  3154866719307098112  1237663268796498065  54326  2802     346   -0.000104708
+</pre>
+
+<p>As another example let's find out how many spectroscopic object are in this table and the spectroscopic class each object belongs to.</p>
+
+<pre>
+sql = &quot;&quot;&quot;
+SELECT COUNT(*) AS num_sp, class FROM SpecObj
+GROUP BY class
+&quot;&quot;&quot;
+
+df = sdss.sql2df(sql)
+df['num_sp'] = df['num_sp'].astype(int)
+df['percent'] = 100 * df['num_sp'] / df['num_sp'].sum()
+print(df)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+    num_sp   class    percent
+0  2963274  GALAXY  58.023260
+1  1102641     QSO  21.590587
+2  1041130    STAR  20.386153
+</pre>
+
+<p>As you see, the are more than five million spectroscopic object in this table. Most of these objects are galaxies, while about %22 are quasars and %20 are stars. Now let's find how many object exist in large redshift, for example at z greater than 1:</p>
+
+<pre>
+sql = &quot;&quot;&quot;
+SELECT COUNT(*) AS num_sp, class FROM SpecObj
+WHERE z&amp;amp;gt;1
+GROUP BY class
+&quot;&quot;&quot;
+
+df = sdss.sql2df(sql)
+df['num_sp'] = df['num_sp'].astype(int)
+df['percent'] = 100 * df['num_sp'] / df['num_sp'].sum()
+print(df)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+   num_sp   class    percent
+0   75462  GALAXY   8.018174
+1  865675     QSO  91.981826
+</pre>
+
+<p>As you see, about %92 of spectral objects whose redshifts are greater than one are quasars. This is really interesting because we know that quasars do not exist any more!</p>
+
+<h2>Region</h2>
+
+<p>You can select a region in the sky with <code>sdss.region</code> class by passing coordinates of its center. There are some optional arguments you can pass to this class: <code>fov</code>, <code>width</code>, <code>heigth</code>, <code>opt</code> and <code>query</code>. The <code>fov</code> argument is the field of view in degrees and the <code>opt</code> argument has been explained <a href="http://skyserver.sdss.org/dr16/en/tools/chart/chartinfo.aspx" target="_blank" rel="noopener">here</a>.</p>
+
+<pre>
+ra = 179.689293428354
+dec = -0.454379056007667
+reg = sdss.Region(ra, dec, fov=0.1, opt='')
+reg.show(figsize=(8,8))
+</pre>
+
+<p>Output:</p>
+
+<div style="text-align: center;"><img src="https://github.com/behrouzz/astrodatascience/raw/main/img/region_ex1.png" alt="sdss region example 1" width="300" height="300" style="padding: 10px 10px 10px 10px;"></div>
+
+<p>Instead of <code>show</code> you can use <code>show3b</code> to get the image in the three filters.</p>
+
+<pre>
+reg.show3b(figsize=(15,8))
+</pre>
+
+<p>Output:</p>
+
+<img src="https://github.com/behrouzz/astrodatascience/raw/main/img/region_ex2.png" alt="sdss region example 2" style="padding: 10px 10px 10px 10px;">
+
+<p>The <code>region</code> class has some useful methods and attributes, such as: the <code>.data</code> attribute which gives you the image data; the <code>.nearest_objects()</code> and the <code>.nearest_spects()</code>, which give you dataframes of photo objects and spectro objects in the region.</p>
+
+<pre>
+df_obj = reg.nearest_objects()
+df_sp = reg.nearest_spects()
+print(df_obj.shape)
+print(df_sp.shape)
+print(df_sp)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+(329, 11)
+(4, 15)
+                 objID            specObjID  ...      zErr  zWarning
+0  1237648720693755918   320932083365079040  ...  0.000016         0
+1  1237648720693690602   320942253847635968  ...  0.000021         0
+2  1237648720693690487  4326862017850003456  ...  0.000007         0
+3  1237674649928532213  3284333942458574848  ...  0.000007         0
+
+[4 rows x 15 columns]
+</pre>
+
+<p>We will write about more advanced features of SDSS in the future posts.</p>
+
+</body>
+</html>

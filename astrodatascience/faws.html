@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Fundamental Astronomy With Swift (FAWS)</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>FAWS</h1>
+
+<p>The Standards of Fundamental Astronomy (<a href="http://www.iausofa.org/" target="_blank" rel="nofollow noopener">SOFA</a>) is a collection of algorithms creates by the International Astronomical Union (IAU). The IAU has implemented these algorithms in two programming languages: Fortran and C. However, there are implementations in other languages by other people or organizations. For example, <a href="https://github.com/liberfa/erfa" target="_blank" rel="nofollow noopener">ERFA</a> (Essential Routines for Fundamental Astronomy) is the python implementation of SOFA and it is a prerequisite for <code>astropy</code>.</p>
+
+<h2>Fundamental Astronomy With Swift (FAWS)</h2>
+
+<p>Swift is a very powerful language. It is 8.4x faster thay python and up to 2.6x faster than C. But it is a very young langauage. It was released for the first time in 2014. There is no important astronomical package in Swift, yet. But in the future everything may change. Currently, Swift supports all major platforms, such as macOS, Linux and Windows. So, I have created a Swift package, named <a href="https://github.com/behrouzz/FAWS" target="_blank" rel="nofollow noopener">FAWS</a> (Fundamental Astronomy With Swift), that is the full implementation of SOFA. It can be the basis of any astronomical library in the future.</p>
+
+<p>With a mac computer you can simply use XCode to add the library. In other platforms, you have to download the package and compile the files alongside your own script. For example, suppose that you have written your code in a file named <code>MyFile.swift</code> and you want to run it in Windows. You can type this line in the command line, then run MyFile.exe:</p>
+
+<code>
+swiftc -o MyFile.exe Basics.swift Matrix.swift CalTime.swift PrecNutPol.swift GeoGnoEclGalHor.swift Ephemerides.swift Astrometry.swift CatalogConv.swift MyFile.swift
+</code>
+
+<h2>How to use</h2>
+
+<p>All the SOFA constants, functions and structures have been implemented in FAWS. They can be accessed as an attribute or method of the main <code>faws</code> struct. For example, the constant <code>DR2D</code> in SOFA is a constant for converting radians to degrees. To use it in FAWS, you should write <code>faws.DR2D</code>.</p>
+<p>When using SOFA/FAWS you haveto pay attention to units. Some useful constants for unit conversions are:</p>
+
+<pre>
+DR2D: Radians to degrees
+DD2R: Degrees to radians
+DAS2R: Arcseconds to radians
+DMAS2R: Milliarcseconds to radians
+</pre>
+
+<h2>Example: Convert Catalog ICRS to observed</h2>
+
+<p>Let's say we want to find the observed coordinates of a star called <em>Gliese 555</em>. The Hipparcos identifier of this star is 71253 and it's SIMBAD <em>main_id</em> is "BD-11 3759". It's basic catalog data from <a href="https://simbad.cds.unistra.fr/simbad/sim-id?Ident=BD-11+3759" target="_blank" rel="nofollow noopener">SIMBAD</a> is:</p>
+
+<pre>
+ra             218.57004859310788
+dec           -12.519559582093887
+pmra                     -355.138
+pmdec                      593.04
+plx_value                159.9225
+rvz_radvel                  -1.28
+</pre>
+
+<p>We have choosen the observation site in Strasbourg, France and the UTC date and time is 10th Feb 2024 at 22:32:37. The Earth Orientation Parameters have been obtained from IERS website.</p>
+
+<pre>
+import FAWS
+
+let faws = Faws()
+
+// Star data
+let rc = 218.57004859310788 * faws.DD2R
+let dc = -12.519559582093887 * faws.DD2R
+let pr = -355.138 * faws.DMAS2R
+let pd = 593.04 * faws.DMAS2R
+let px = 159.9225 * 0.001
+let rv = -1.28
+
+// Time of observation
+let (utc1, utc2) = faws.dtf2d(&quot;UTC&quot;, 2024, 2, 10, 22, 32, 37.0)
+
+// Earth Orientation Parameters
+let dut1 = 0.00261476
+let xp = 0.0473476 * faws.DAS2R
+let yp = 0.2368623 * faws.DAS2R
+
+// Observation site (coordinates and conditions)
+let elong = 7.744083817548831 * faws.DD2R //longitude (radians)
+let phi = 48.58313582900411 * faws.DD2R   //latitude (radians)
+let hm = 140.0                            //height (m)
+let phpa = 987.0 //Ambient pressure (HPa)
+let tc = 15.0    //Temperature (C)
+let rh = 0.92    //Relative humidity (frac)
+let wl = 0.55    //Effective color (microns)
+
+let (aob, zob, hob, dob, rob, eo) = faws.atco13(
+        rc, dc, pr, pd, px, rv,
+        utc1, utc2, dut1,
+        elong, phi, hm,
+        xp, yp,
+        phpa, tc, rh, wl
+        )
+        
+    
+print(&quot;Azimuth                 : \(aob * faws.DR2D)&quot;)
+print(&quot;Zenith Distance         : \(zob * faws.DR2D)&quot;)
+print(&quot;Hour Angle              : \(hob * faws.DR2D)&quot;)
+print(&quot;Declination             : \(dob * faws.DR2D)&quot;)
+print(&quot;Right Ascension         : \(rob * faws.DR2D)&quot;)
+print(&quot;equation of the origins : \(eo  * faws.DR2D)&quot;)
+</pre>
+
+<p>The output (all in degrees):</p>
+
+<pre>
+Azimuth                 : 96.59548514831307
+Zenith Distance         : 100.89938985767792
+Hour Angle              : -92.37778736685267
+Declination             : -12.498270592129632
+Right Ascension         : 218.47147240846533
+equation of the origins : -0.3079588055596707
+</pre>
+
+<p>The FAWS package can be accessed via <a href="https://github.com/behrouzz/FAWS" target="_blank" rel="nofollow noopener">this link</a>. For the list of all functions and some examples, see <a href="https://behrouzz.github.io/faws/" target="_blank" rel="nofollow noopener">this link</a>.</p>
+
+</body>
+</html>

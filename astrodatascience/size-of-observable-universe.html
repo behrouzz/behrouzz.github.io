@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Size of Observable Universe</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Size of Observable Universe</h1>
+
+<p>Imagine a photon of light, or any type of particle, has been emitted at the first moment of beginning of the Universe, i.e, when the Big Bang happened. What is the maximum distance that this particle could have traveled to reach us at the current moment? We call this distance <em>Particle Horizon</em>. This is a horizon which can be considered as the frontier of our observable universe: a borderline beyond which we can not see anything.</p>
+
+<p>If we multiply the age of the universe by the speed of light, we will get a distance less than 14 billion light-years. But it is not the <em>particle horizon</em>. In fact, we can observe objects far beyond it. To calculate the <em>particle horizon</em>, you can not simply multiply the age of the universe by the speed of light, because the Universe is not static. It is expanding with changing rates.</p>
+
+<p>So, in order to calculate the <em>particle horizon</em>, we need to use the concept of <em>proper distance</em>. The proper distance is measured at a specific moment in the cosmic time \(t\). Imagine a distant galaxy which emitted light at time \(t_{e}\) and we see that light today at time \(t_{0}\) (current time). Our distance to the galaxy is calculated with the following formula:</p>
+
+\[ d(t_{o}) = c\int_{t_{e}}^{t_{o}}\frac{dt}{a(t)} \]
+
+<p>where, \(d(t_{o})\) is our current distance to the galaxy, \(c\) is speed of light in vacuum, \(a(t)\) is the scale factor as function of time, \(t_{e}\) is the moment that the light has been emitted from the galaxy, and \(t_{o}\) is the moment that the light has reached us.</p>
+
+<p>Note that the scale factor is a function in terms of time and it depends on the model of universe that you choose. If we put \(t_{e}=0\), it means that we want to calculate our distance from an object that has emitted a photon exactly at the birth of the universe. In this case, the calculated proper distance will be the particle horizon.</p>
+
+<p>In order to calculate the particle horizon with the above formula, there are two things that we need to know: \(t_{o}\) and \(a(t)\). In fact, if we know the scale factor \(a(t)\) as a function of time, we can calculate the age of the universe \(t_{o}\) because it is the moment when the scale factor is 1.</p>
+
+<p>In <a href="https://astrodatascience.net/how-to-calculate-scale-factor/">another post</a> I have explained how we can calculate the scale factor. Solving the <em>Friedmann Equation</em> for a universe consisting of radiation, matter and dark energy, gives us the following formula:</p>
+
+\[ \int_{0}^{a}\frac{\mathrm{d} a}{\sqrt{\frac{\Omega _{r,0}}{a^{2}}+\frac{\Omega _{m,0}}{a}+a^{2}\Omega _{\Lambda,0}}}=H_{0}t \]
+
+<p>Here, I'm going to use parameters measured by Planck mission published in 2018. These known values are Hubble constant \(H_{0}\) and current density parameters of radiation \(\Omega _{r,0}\), matter \(\Omega _{m,0}\) and dark energy \(\Omega _{\Lambda,0}\). Then, I create a range of evenly spaced numbers between 0 and 1 to represent \(a\). I use the above formula to calculate <code>t</code>, which is a range of corresponding moments of the scale factor range. The last element of this range, <code>t[-1]</code>, is the age of the universe; because the last element of the scale factor range was 1. The last step in calculating scale factor is fitting a polynomial to these two ranges.</p>
+
+<p>Now that we have the scale factor as a numpy polynomial class, we can use the formula of the proper distance to calculate the particle horizon.</p>
+
+<pre>
+import numpy as np
+import scipy.integrate as integrate
+
+# Hubble contsant in SI
+H0 = 67.66 * 0.00102271
+
+# Density parameters
+Or0 = 0.0014936944554559174
+Om0 = 0.30966
+Ode0 = 0.6888463055445441
+
+# scale factor as range of numbers from 0 to 1
+a = np.linspace(1e-100, 1, 100000)
+
+# The expression in the integral
+expr1 = lambda a: 1 / np.sqrt(Or0/a**2 + Om0/a + Ode0*a**2)
+
+# Calculate t
+t = np.array([integrate.quad(expr1, 0, i)[0]/H0 for i in a])
+
+# Age of universe
+t_o = t[-1]
+
+# Scale factor as polynomial
+coefs = np.polyfit(t, a, 13)
+a = np.poly1d(coefs)
+
+# The expression in the integral
+expr2 = lambda t: 1/a(t)
+
+# Proper distance (particle horizon)
+d = integrate.quad(expr2, 0, t_o)[0]
+
+print(f'Age of Universe  : {t_o:.2f} billion years')
+print(f'Particle Horizone: {d:.2f} billion light years')
+</pre>
+
+<p>The above script gives us the following output:</p>
+
+<pre>Age of Universe  : 13.73 billion years
+Particle Horizone: 42.56 billion light years
+</pre>
+
+<p>It means that the radius of the observable universe is about 42.5 billion light years. The value calculated by scientists is about 46.5 billion light years. The reason for this difference comes from the approximation method used. We used a one-dimensional polynomial to approximate the scale factor which can not be sufficiently precise.</p>
+
+
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>SDSS Objects</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>SDSS Objects</h1>
+
+<p>In a recent <a href="introduction-to-sdss.html">post</a> I have written about a few basic concepts of the Sloan Digital Sky Survey (SDSS) and how to retrieve some data using ADQL from its servers. Now, in this post, I'm going to introduce two major kinds of objects in more depth and explain how to use <code>sdss</code> python library to access and analyse these objects. If you've not yet installed <a href="https://pypi.org/project/sdss/">sdss</a> python packege, use can easily install it with <code>pip</code> package manager:</p>
+
+<code>
+pip install sdss
+</code>
+
+<p>There are two main classes in this package that we are going to introduce in this article: <code>PhotoObj</code> and <code>SpecObj</code> classes.</p>
+
+<h2>The PhotoObj class</h2>
+
+<p>In the last <a href="https://astrodatascience.net/introduction-to-sdss/">post</a> I have already explained the photometric data and the <code>PhotoObj</code> table which can be queried via <a href="PhotoObj">SQL Search</a>. Alternatively, you can use <code>PhotoObj</code> class from the <code>sdss</code> python package by passing the identifier of the object to this class. In the photometric data, a unique ID has been assigned to each object in the sky, called <code>ObjID</code>. After creating the instance of the class, you will have access to some of its attributes and methods:</p>
+
+<pre>
+import sdss
+
+ph = sdss.PhotoObj(1237648720693755918)
+
+print(ph.objID)
+print(ph.downloaded)
+print(ph.sky_version)
+print(ph.rerun)
+print(ph.run)
+print(ph.camcol)
+print(ph.field)
+print(ph.id_in_field)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+1237648720693755918
+False
+2
+301
+756
+2
+427
+14
+</pre>
+
+<p>The value of <code>ph.downloaded</code> is <code>False</code>, which means that the data for this object has not been downloaded from the SDSS server. We have to call the <code>download</code> method in order to have access to other attributes and methods:</p>
+
+<pre>
+ph.download()
+
+print(ph.specObjID)
+print(ph.downloaded)
+print(ph.ra, ph.dec)
+print(ph.type)
+print(ph.mag)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+320932083365079040
+True
+179.689293428393 -0.454379058425512
+GALAXY
+{'u': 19.09722, 'g': 17.60256, 'r': 16.82659, 'i': 16.43768, 'z': 16.14087}
+</pre>
+
+<p>Note that if the object has spectrum, the <code>specObjID</code> attribute will return a non-zero number that will be explained in the next section. The <code>type</code> attribute may return one of the three values UNKNOWN, GALAXY or STAR, based on the image processing algorithm implemented by the SDSS.</p>
+
+<p>Another useful information is the image of the object. If you want to view the object, simply call the <code>show</code> method. You can pass <i>scale</i>, <i>width</i> and/or <i>height</i> arguments if you want.</p>
+
+<pre>
+ph.show()
+</pre>
+
+<p>Output:</p>
+
+<div style="text-align: center;"><img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/sdss_ph_show.png" alt="sdss photo object show" width="300" height="300" style="padding: 5px 10px 10px 10px;"></div>
+
+<p>Another possibility is to get the image data as a numpy array. To do this, call the <code>cutout_image</code> method:</p>
+
+<pre>
+img_data = ph.cutout_image()
+print(img_data.shape)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+(300, 300, 3)
+</pre>
+
+<p>Again, if you want different scale and resolution, you can pass <i>scale</i>, <i>width</i> and/or <i>height</i> arguments when calling the <code>cutout_image</code> method.</p>
+
+<h2>The SpecObj class</h2>
+
+<p>Another major type of data in the SDSS, is the spectroscopic data. A unique ID, called <i>specObjID</i> is assigned to each one-dimensional spectrum. You can create an instance of the <code>SpecObj</code> class by passing the <i>specObjID</i> of your desired object. After creating the instance, you have access to some of its attributes and methods.</p>
+<p>To resume our example, let's pass the <code>specObjID</code> we've got above:</p>
+
+<pre>
+sp_id = sp.specObjID
+
+sp = sdss.SpecObj(sp_id)
+
+print(sp.specObjID)
+print(sp.downloaded)
+print(sp.plate)
+print(sp.fiberID)
+print(sp.mjd)
+print(sp.run2d)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+320932083365079040
+False
+285
+184
+51930
+26
+</pre>
+
+<p>In order access to other methods and attributes, you should first download the spectrum by calling the <code>download</code> method.</p>
+
+<pre>
+sp.download()
+
+print('Photo objID:', sp.bestObjID)
+print('Downloaded:', sp.downloaded)
+print('ra:', sp.ra)
+print('dec:', sp.dec)
+print('Spec Type:', sp.type)
+print('Mag:', sp.mag)
+print('Redshift:', sp.z)
+print('Main Class:', sp.mainClass)
+print('Sub Class:', sp.subClass)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+Photo objID: 1237648720693755918
+Downloaded: True
+ra: 179.68928
+dec: -0.45436733
+Spec Type: GALAXY
+Mag: {'u': 19.09722, 'g': 17.60256, 'r': 16.82659, 'i': 16.43768, 'z': 16.14087}
+Redshift: 0.09484052
+Main Class: GALAXY
+Sub Class: STARFORMING
+</pre>
+
+<p>Note that the <code>bestObjID</code> is the corresponding <i>objID</i> of the object in the photometric data.</p>
+
+<h2>Inspecting the spectrum</h2>
+
+<p>After creating the instance of the <code>SpecObj</code> class, you can retrieve the spectrum of the object in three ways.</p>
+
+<h3>1) The <i>show_spec</i> method</h3>
+
+<p>The simplest way to view the spectrum is by calling the <code>show_spec</code> method. The plot of the spectrum with be shown as an image. This is the plot that SDSS has created. If you want just see the spectrum without having control on the data, this is the most straightforward way.</p>
+
+<pre>
+sp.show_spec()
+</pre>
+
+<p>Output:</p>
+
+<div style="text-align: center;"><img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/sp_320932083365079040.gif" alt="sdss spectrum show" width="800" height="580" style="padding: 5px 10px 10px 10px;"></div>
+
+<h3>2) The <i>spec_df</i> method</h3>
+
+<p>I you want the values of flux for each wavelength, you can use the <code>spec_df</code> method. This method will return a pandas DataFrame with four columns: <i>Wavelength</i>, <i>Flux</i>, <i>BestFit</i> and <i>SkyFlux</i>. The <i>Flux</i> column is the raw data as recorded by the spectroscope, while the <i>BestFit</i> column is the result of the SDSS algorithms.</p>
+
+<pre>
+df = sp.spec_df()
+print(df)
+</pre>
+
+<p>Output:</p>
+
+<pre>
+      Wavelength    Flux  BestFit  SkyFlux
+0       3801.019   4.973    7.549    5.208
+1       3801.893  11.402    7.506    5.351
+2       3802.770   4.585    7.430    5.252
+3       3803.645   7.782    7.438    5.225
+4       3804.522   8.624    7.160    5.252
+...          ...     ...      ...      ...
+3834    9189.672  11.865   11.371    4.139
+3835    9191.786  10.487   11.460    4.010
+3836    9193.905  10.810   11.474    3.982
+3837    9196.020  12.317   11.527    4.032
+3838    9198.141  12.533   11.609    4.075
+
+[3839 rows x 4 columns]
+</pre>
+
+<h3>3) The <i>download_spec</i> method</h3>
+
+<p>If you want full control, you should download the spectrum as a FITS file using the <code>download_spec</code> method. This method has a few optional arguments such as <code>path</code> and <code>filename</code> in the case if you want to save the downloaded spectrum in a specific folder and with a specific name. Furthermore, this method, by default, will download a <i>lite</i> FITS file, but you can change this behavior with the <code>lite</code> and <code>fits</code> arguments.</p>
+
+<p>Let's just download the spectrum of our example as a lite FITS file in the current working folder and with the default filename:</p>
+
+<pre>
+sp.download_spec()
+</pre>
+
+<p>Now, If you look at your working directory, you will find the downloaded file: <code>spec-0285-51930-0184.fits</code>.</p>
+
+<p>In another post, I will discuss about the contents of this file, the way we can analyse it and create a nice spectrum plot from it.</p>
+
+
+</body>
+</html>

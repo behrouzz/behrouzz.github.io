@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Astronomical Catalogs and Databases</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Astronomical Catalogs and Databases</h1>
+
+<p>In this page I introduce some of the most useful astronomical data centers, databases and catalogs. This page will be updated as I find something interesting to add or replace with existing ones. If you think something is missing here, feel free to contact me to be added in this page.</p>
+
+<h2>CDS Services</h2>
+
+<p><em>Centre de Données astronomiques de Strasbourg</em>, <a href="http://cdsweb.u-strasbg.fr/" target="_blank" rel="nofollow noopener">CDS</a>, is the greatest astronomical data center with several services and databases. The most popular services of CDS are <a href="http://simbad.u-strasbg.fr/simbad/" target="_blank" rel="nofollow noopener">SIMBAD</a>, <a href="https://vizier.u-strasbg.fr/viz-bin/VizieR" target="_blank" rel="nofollow noopener">VizieR</a> and <a href="https://aladin.u-strasbg.fr/aladin.gml" target="_blank" rel="nofollow noopener">Aladin</a>. I introduce them here very briefly.</p>
+
+<h3>SIMBAD</h3>
+
+<p>SIMBAD is a database that contains data from a lot of different astronomical catalogs which consists of objects beyond the Solar System. There are a couple of ways you can search in this database, but the most efficient way is using SQL queries. A special version of SQL, called ADQL, can be used directly on <a href="http://simbad.u-strasbg.fr/simbad/sim-tap" target="_blank" rel="nofollow noopener">TAP queries page</a> for basic or advanced searches. You can also use python libraries such as <code>astroquery</code> and <code>hypatie</code> to retrieve data as explained <a href="https://astrodatascience.net/astronomical-python-packages/" target="_blank" rel="noopener">here</a>. Let's find out how many objects exist in the SIMBAD database, using <code>hypatie</code>:</p>
+
+<pre>
+>>> from hypatie.simbad import object_type, sql2df
+>>>
+>>> sql2df(&quot;SELECT COUNT(*) FROM basic&quot;)
+  COUNT_ALL
+0  12541947
+>>>
+>>> stars = str(tuple(object_type('star')))
+>>> sql2df(f&quot;SELECT COUNT(*) FROM basic WHERE otype_txt IN {stars}&quot;)
+  COUNT_ALL
+0   5566080
+</pre>
+
+<p>As you see, there are more about 12.5 billion objects in SIMBAD database among which about 5.5 billion are stars.</p>
+
+<h3>VizieR</h3>
+
+<p>Another really useful service created by CDS, is the <em>VizieR Catalogue Service</em>.
+If you already know which catalog you want to use, this is the best place to retrieve data from that catalog. If you don't know which catalog to use, you can easily search VizieR to find which catalog is best for your job. There are also other things VizieR can do, such as <a href="http://cdsarc.u-strasbg.fr/assocdata/" target="_blank" rel="nofollow noopener">search for spectra and images</a>. You can search VizieR in different ways, again, the most efficient way is using SQL scripts, directly on the web using <a href="http://tapvizier.u-strasbg.fr/adql/" target="_blank" rel="nofollow noopener">Tap VizieR</a> or using python packages such as <code>astroquery</code> and <code>hypatie</code>. We will use VizieR in almost all examples given in this website, where we want to retrieve data from a specific catalog.</p>
+
+<h3>Aladin</h3>
+
+<p>Another tool provided by CDS is <a href="https://aladin.u-strasbg.fr/aladin.gml" target="_blank" rel="nofollow noopener">Aladin</a> which is an interactive sky atlas. There is a <em>desktop</em> version that you can install on your machine and a <em>lite</em> version that can be used with a browser.</p>
+
+<h2>SDSS</h2>
+
+<p>The Sloan Digital Sky Survey (SDSS) is one of the greatest deep-sky surveys ever made. It has been launched by <em>Apache Point Observatory</em> in New Mexico, United States. It contains images and spectra for a large number of deep-sky objects. Several services are provided on the <a href="https://www.sdss.org/" target="_blank" rel="nofollow noopener">SDSS website</a>, but what makes it really interesting is the huge amout of spectrocopic data it has provided. There two types of spectroscopic data in SDSS: one-dimensional and two-dimensional spectra. The SDSS has recorded one-dimensional <a href="https://www.sdss.org/dr16/spectro/" target="_blank" rel="nofollow noopener">optical spectra</a> for more than five million objects. The two-dimensional spectrum, called <em>data cube</em>, is a new advanced type of data provided by SDSS for about 10000 nearby galaxies in the <a href="https://www.sdss.org/dr16/manga/" target="_blank" rel="nofollow noopener">MaNGA</a> survey.</p>
+
+<p>Like most astronomical databases, SDSS supports SQL scripts with <a href="http://skyserver.sdss.org/dr16/en/tools/search/sql.aspx" target="_blank" rel="nofollow noopener">TAP quesries</a> and it has provided a well organized <a href="http://skyserver.sdss.org/dr16/en/help/browser/browser.aspx" target="_blank" rel="nofollow noopener">Schema Browser</a>. I've written a series of articles in this website about SDSS along with using the <a href="https://pypi.org/project/sdss/" target="_blank" rel="nofollow noopener">sdss</a> python package. You can find the first post of this series <a href="https://astrodatascience.net/introduction-to-sdss/">here</a>.</p>
+
+<h2>Horizons</h2>
+
+<p>If you're interested in solar system dynamics you should know <a href="https://ssd.jpl.nasa.gov/?horizons" target="_blank" rel="nofollow noopener">JPL Horizons</a>. It is an on-line solar system data and ephemeris computation service that gives you position and velocity of key solar system objects. Basically, you select a target body and a time span and a few other options, and it gives you the coordinates of the object in that period. The results can be in the form of <em>Observer</em> table or <em>Vector</em> table. The returned coordinates in the first case are in <code>(Ra,Dec)</code> or <code>(Az,Alt)</code> and in the second case are in <code>(x,y,z)</code>.</p>
+
+<p>The Horizons can be accessed in three ways: telnet, email or web-interface. With python, you can use <code>astroqueries</code> or <code>hypatie</code>. In <a href="https://pypi.org/project/hypatie/" target="_blank" rel="nofollow noopener">hypatie</a>, you can use the <code>horizons</code> module which provides two classes <code>Vector</code> and <code>Observer</code> to return positions. A few examples of using this module can be found <a href="https://github.com/behrouzz/hypatie/blob/main/README.md" target="_blank" rel="nofollow noopener">here</a>.</p>
+
+<h2>Elodie and Sophie</h2>
+
+<p>Whether you want to search for an exoplanet or you want to know the changing behavior of a star, you need several spectra of this particular star in a period of time. The <em>Observatoire de Haute-Provence</em> has provided two archives of stellar spectra: <a href="http://atlas.obs-hp.fr/elodie/" target="_blank" rel="nofollow noopener">Elodie</a> and <a href="http://atlas.obs-hp.fr/sophie/" target="_blank" rel="nofollow noopener">Sophie</a>. The stellar spectra have been recorded across time and are presented in FITS format. You can access data and download spectra directly from their web service. Alternatively, you can use the <a href="https://pypi.org/project/stelspec/" target="_blank" rel="nofollow noopener">stelspec</a> python package.</p>
+
+<h2>Hipparcos</h2>
+
+<p>The <em>Hipparcos Catalog</em> contains data collected by the <a href="https://en.wikipedia.org/wiki/Hipparcos" target="_blank" rel="nofollow noopener">Hipparcos</a> satellite between 1989 and 1993. The main catalog contains 118218 objects, and for each object it provides fields such as coordinats, parallax, proper motion and some basic photometric data. The most simple way of accessing this catalog is via <a href="https://vizier.u-strasbg.fr/viz-bin/VizieR-3?-source=I/239/hip_main&-out.max=50&-out.form=HTML%20Table&-out.add=_r&-out.add=_RAJ,_DEJ&-sort=_r&-oc.form=sexa" target="_blank" rel="nofollow noopener">VizieR</a>. With python, you can use <code>astroqueries</code> or <code>hypatie</code> libraries. In <a href="https://pypi.org/project/hypatie/" target="_blank" rel="nofollow noopener">hypatie</a>, you can use the <code>horizons</code> module by importing its <code>Catalogue</code> class and passing it <code>hipparcos</code> as a string.</p>
+
+<h2>Gaia</h2>
+
+<p>Gaia is a space observatory launched by the <em>European Space Agency (ESA)</em> in 2013 and its mission has not been completed yet. Until this moment, three releases of the processed data have been published by <a href="https://www.cosmos.esa.int/web/gaia" target="_blank" rel="nofollow noopener">Gaia</a>: <em>Data Release 1</em>, <em>Data Release 2</em> and <em>Early Data Release 3</em>. Since the third data released has not been fully published, most of the time in this website we will use <em>Gaia DR2</em> which contains about 1.7 billion objects.</p>
+
+<p>A very simple way of retrieving data from Gaia is using <a href="https://vizier.u-strasbg.fr/viz-bin/VizieR" target="_blank" rel="nofollow noopener">VizieR</a>. For example, searching <em>Gaia DR2</em> leads you to <a href="https://vizier.u-strasbg.fr/viz-bin/VizieR-3?-source=I/345&-out.max=50&-out.form=HTML%20Table&-out.add=_r&-out.add=_RAJ,_DEJ&-sort=_r&-oc.form=sexa" target="_blank" rel="nofollow noopener">this page</a> where you can select the fields you want to be returned and even impose some conditions. A more efficient way is using SQL scripts directly on the Gaia website. Let's say we want to get coordinates, parallax and apparent magnitudes of very bright objects from <em>Gaia DR2</em>. Go to <a href="https://gea.esac.esa.int/archive/" target="_blank" rel="nofollow noopener">Gaia Archive</a> and from the top left tabs, click on <em>SEARCH</em> and then click on <em>Advanced (ADQL)</em>. Now you can type your SQL script in the window. As for our example, copy the following script and paste it in that window:</p>
+
+<pre>
+SELECT source_id, ra, dec, parallax, phot_g_mean_mag
+FROM gaiadr2.gaia_source
+WHERE phot_g_mean_mag BETWEEN 0 AND 4
+</pre>
+
+<p>Now, click on <em>Submit Query</em> button at the bottom of the window. If you want to see the first few rows of the result, click on <em>Query Results</em> from the top left tabs. You can also download the complete results in different formats, such as CSV, FITS, JSON or VOTable. The above script will return 625 rows.</p>
+
+<p>With python, you can use <code>astroqueries</code> or <code>hypatie</code> libraries. The following example will return exactly the same results as you saw above:</p>
+
+<pre>
+from hypatie import Catalogue
+
+cols = ['source_id','ra','dec','parallax','phot_g_mean_mag']
+
+hip = Catalogue(
+    name='gaia2',
+    columns=cols,
+    where='phot_g_mean_mag BETWEEN 0 AND 4',
+    n_max=100000
+    )
+
+data, meta = hip.download()
+</pre>
+
+<p>Here, <code>meta</code> is a pandas DataFrame with descriptions about the requested fields and <code>data</code> is another pandas DataFrame containing the requested data. In our example, <code>data</code> has 625 rows and 5 columns.</p>
+
+
+</body>
+</html>
