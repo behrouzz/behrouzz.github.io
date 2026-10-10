@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>FITS File Format</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>FITS File Format</h1>
+
+<p>Flexible Image Transport System (FITS) is a very common file format in astronomy. It can store different types of data, including images and tables and a profide a greate way to store metadata. Astropy has a subpackage <code>fits</code> that can be used to read, modify and create FITS files.</p>
+
+<h2>Structure of a FITS file</h2>
+
+<p>We can open a FITS file using the <code>open</code> function from the <code>fits</code> subpackage. This function return a <code>HDUList</code> object. When we have finished working with the file, we can close it using <code>.close()</code> method. In the example below, we open a file named <code>'656nmos.fits'</code>, see the type of object returned by the <code>open</code> function, then we close the file. The file of the example has been taken from this link:</p>
+
+<a href="https://esahubble.org/projects/fits_liberator/eagledata" target="_blank" rel="nofollow noopener">https://esahubble.org/projects/fits_liberator/eagledata</a>
+
+<pre><code class="language-python">>>> from astropy.io import fits
+>>> hdul = fits.open('656nmos.fits')
+>>> type(hdul)
+&lt;class 'astropy.io.fits.hdu.hdulist.HDUList'&gt;
+>>> hdul.close()
+</code></pre>
+
+<p>What it the <code>HDUList</code> object? It is a list-like object that is a collection of another object named HDU. So, the creator of the FITS file, can put as many as HDUs he/she wants in the  <code>HDUList</code> object, i.e., in the file. Howsever, each HDU can be of a different type. The first HDU in the file is alway of type <code>PrimaryHDU</code>. But the other HDUs can be in one of these types: <code>ImageHDU</code>, <code>TableHDU</code>, <code>BinTableHDU</code> or <code>GroupsHDU</code>. Each of these types define the nature of the data in that HDU. Let's see how many HDUs exist in our <code>hdul</code> variable in the above example and find the type of each HDU:</p>
+
+<pre><code class="language-python">>>> len(hdul)
+2
+>>> type(hdul[0])
+&lt;class 'astropy.io.fits.hdu.image.PrimaryHDU'&gt;
+>>> type(hdul[1])
+&lt;class 'astropy.io.fits.hdu.table.TableHDU'&gt;
+</code></pre>
+
+<p>You can see that there are two HDUs in our example file. The first one is of type <code>PrimaryHDU</code> and the second one is of type <code>TableHDU</code>.</p>
+
+<p>Now, what is an HDU? The HDU stands for <em>Header Data Unit</em>. It means that it is a <em>Unit</em> that contains two parts: the <em>Header</em> part and the <em>Data</em> part. You can access each part of an HDU using <code>.header</code> and <code>.data</code> attributes. Let's see types of <em>Header</em> and <em>Data</em> parts of each of the HDUs in our example:</p>
+
+<pre><code class="language-python">from astropy.io import fits
+ 
+hdul = fits.open('656nmos.fits')
+
+print(type(hdul[0].header))
+print(type(hdul[0].data))
+print(type(hdul[1].header))
+print(type(hdul[1].data))
+
+hdul.close()
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+&lt;class 'astropy.io.fits.header.Header'&gt;
+&lt;class 'numpy.ndarray'&gt;
+&lt;class 'astropy.io.fits.header.Header'&gt;
+&lt;class 'astropy.io.fits.fitsrec.FITS_rec'&gt;
+</pre>
+
+<p>You can see that the <em>Header</em> part is always of type <code>Header</code>. But the <em>Data</em> part can be different depending on the nature of the data. In our example, the first HDU has the data of type <code>numpy.ndarray</code>, while the second HDU has the data of type <code>FITS_rec</code>. We'll see very soon what are each of these, but for now, let's introduce a usefull method that gives you an overal view of the file structre. The <code>HDUList</code> object has <code>.info()</code> method that prints the available HDUs in the file along with some caracteristics of each HDU.</p>
+
+<pre><code class="language-python">from astropy.io import fits
+hdul = fits.open('656nmos.fits')
+hdul.info()
+hdul.close()
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+Filename: 656nmos.fits
+No.    Name      Ver    Type      Cards   Dimensions   Format
+  0  PRIMARY       1 PrimaryHDU     290   (1600, 1600)   float32   
+  1  656nmos.tab   1 TableHDU       353   1R x 49C   [D25.17, D25.17, E15.7, E15.7, E15.7, E15.7, ...]  
+</pre>
+
+<p>The above output shows that our file has two HDUs. The first one is of type <code>PrimaryHDU</code> and the second one is of type <code>TableHDU</code>. You can see the name of each HDU, therir versions, their types, the number of cards in each HDU header, the dimensio of each HDU data and its format. Now, let's see what are Header and Data.</p>
+
+<h2>Header</h2>
+
+<p>The <em>header</em> of an HDU is a standard way of presenting some information about the <em>data</em> that exsits in that HDU. It is not the data itself, it is the metadata. Sometimes, the fisrt HDU has no data; in this case the header gives information about the whole file.</p>
+<p>The header stores information in <em>cards</em>. A header can have any number of cards. In the example above, you can see that the header of the first HDU has 290 cards and the header of the second HDU has 353 cards. Let's see the first 10 cards of the header of the first HDU:</p>
+
+<pre><code class="language-python">>>> hdul[0].header[:10]
+SIMPLE  =                    T / FITS STANDARD                                  
+BITPIX  =                  -32 / FITS BITS/PIXEL                                
+NAXIS   =                    2 / NUMBER OF AXES                                 
+NAXIS1  =                 1600 /                                                
+NAXIS2  =                 1600 /                                                
+EXTEND  =                    T / There maybe standard extensions                
+BSCALE  =                1.0E0 / REAL = TAPE*BSCALE + BZERO                     
+BZERO   =                0.0E0 /                                                
+OPSIZE  =                 2112 / PSIZE of original image                        
+ORIGIN  = 'STScI-STSDAS'       / Fitsio version 21-Feb-1996   
+</code></pre>
+
+<p>Each line in the above results is a <em>card</em>. You can see that each card has three elements: 
+<em>keyword</em>, <em>value</em>, and <em>comment</em>. For example, in the first card, <code>SIMPLE</code> is the keyword, <code>T</code> is the value and <code>FITS STANDARD</code> is the comment. You can also use the <code>.cards</code> attribute of the Header object to access the cards. Each card is represented by a tuple:</p>
+
+<pre><code class="language-python">>>> hdul[0].header.cards[:10]
+('SIMPLE', True, 'FITS STANDARD')
+('BITPIX', -32, 'FITS BITS/PIXEL')
+('NAXIS', 2, 'NUMBER OF AXES')
+('NAXIS1', 1600, '')
+('NAXIS2', 1600, '')
+('EXTEND', True, 'There maybe standard extensions')
+('BSCALE', 1.0, 'REAL = TAPE*BSCALE + BZERO')
+('BZERO', 0.0, '')
+('OPSIZE', 2112, 'PSIZE of original image')
+('ORIGIN', 'STScI-STSDAS', 'Fitsio version 21-Feb-1996')
+</code></pre>
+
+<p>You can get or modify the value of a card if you pass its keyword as follow:</p>
+
+<pre><code class="language-python">>>> hdul[0].header['ORIGIN']
+'STScI-STSDAS'
+>>> hdul[0].header['ORIGIN'] = 'Hubble'
+>>> hdul[0].header['ORIGIN']
+'Hubble'
+</code></pre>
+
+<p>If you want to save changes to disk, use the <code>.writeto()</code> method:</p>
+
+<pre><code class="language-python">hdul.writeto('new_file.fits')
+</code></pre>
+
+<p>Header is not just some information for the user. It can also store information that may be used by the application or the package to know how to deal with the data. We will see it later.</p>
+
+<h2>Data</h2>
+
+<p>FITS files can store many kinds of data. So, while the header is always of type <code>Header</code> object, the data can be of different types. In most cases, the data may be a numpy array, a row of data or multiple rows.</p>
+
+<p>In our example file, there are two HDUs. Let's explore the data of each HDU. The data of the first HDU is a numpy array with the shape 1600x1600. This is an image and we will late how to draw it:</p>
+
+
+<pre><code class="language-python">>>> with fits.open('656nmos.fits') as hdul:
+	print(type(hdul[0].data))
+	print(hdul[0].data.shape)
+
+	
+&lt;class 'numpy.ndarray'&gt;
+(1600, 1600)
+</code></pre>
+
+<p>The data type of the second HDU is <code>FITS_rec</code>. This is a subclass of <code>numpy.recarray</code>. One simple way to read this type of data in astropy is to pass it to <code>Table</code> objcet:</p>
+
+<pre><code class="language-python">>>> from astropy.io import fits
+>>> from astropy.table import Table
+>>> hdul = fits.open('656nmos.fits')
+>>> type(hdul[1].data)
+&lt;class 'astropy.io.fits.fitsrec.FITS_rec'&gt;
+>>> t = Table(hdul[1].data)
+>>> print(t)
+     CRVAL1            CRVAL2       CRPIX1 CRPIX2 ... MEANC200 MEANC300 BACKGRND
+--------------- ------------------- ------ ------ ... -------- -------- --------
+274.71149247724 -13.816384007183999  386.5  396.0 ... 114.3746 100.2731 42.37756
+>>> hdul.clos()
+</code></pre>
+
+<p>You can also get the names of the columns using <code>.columns</code> attribute and get the value of a column as follow:</p>
+
+<pre><code class="language-python">>>> hdul[1].data['CRVAL1']
+array([274.71149248])
+</code></pre>
+
+<h2>Displaying image in FITS file</h2>
+
+<p>Images are stored in FITS files as numpy arrays. So, they can be shown in the output in many different ways. The simplest way is to use the function <code>imshow</code> from <code>matplotlib</code> package. However, there's something that should be considered in this way. Some images are too dark to be visible when using <code>imshow</code> function. You may need to fix this using arguments <code>vmin</code> and <code>vmax</code>, or normalize values by providing a function, such as <code>LogNorm()</code>, to the <code>norm</code> argument.
+
+<pre><code class="language-python">from astropy.io import fits
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+
+hdul = fits.open('656nmos.fits')
+img = hdul[0].data
+hdul.close()
+
+plt.imshow(img, cmap='gray', norm=LogNorm())
+plt.show()
+</code></pre>
+
+<div style="text-align: center;"><img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/astropy-fits-1.png" alt="Pillars of Creation from FITS file" style="padding: 5px 10px 10px 10px;"></div>
+
+<p>Well, that's good if you want to just view the image. The problem with the above image is the units of the axes: they are in pixels. When we plot a part of the sky, we expect the axes to be in astronomical coordiantes, such as RA and Dec. One great advantage of saving astronomical images in FITS format instead of JPG or PNG, is that we can save the projection data in the header of the HDU. But how can we read these information from the header?</p>
+
+<p>This is what astropy does behind the scene with a subpackage named <code>wcs</code>. The World Coordinate Systems (WCS) manages geometric transformations between coordinates. In our case, we need a tranformation between pixels to celestial coordinates. The <code>wcs</code> subpackage has a <code>WCS</code> class. We should pass it the header of the HDU. Our image is in the first HDU, so we have to create an object as follow:</p>
+
+<code>wcs = WCS(hdul[0].header)</code>
+
+<p>This new object has now the nessessary information about the projection. We can pass it to matplotlib <code>subplot</code> function to get back an <code>Axes</code> object:</p>
+
+<code>ax = plt.subplot(projection=wcs)</code>
+
+<p>You can now use the <code>imshow</code> function as before to draw the image.</p>
+
+<p>However, there's much we can to to customize the resulting image better. Now, <code>ax</code> has a new attribute <code>.coords</code> that will return a <code>CoordinatesMap</code> object. Put the coordinates components to access it like <code>ax.coords['ra']</code> and <code>ax.coords['dec']</code>. If you want to customize the format of the axes, you can use <code>.set_major_formatter</code> method. For example to view RA in degree, arcminutes and arcseconds:</p>
+
+<code>ax.coords['ra'].set_major_formatter('dd:mm:ss')</code>
+
+<p>Another customization is to specify how many ticks and lines should apprear in the image. We can use <code>.set_ticks</code> method and specify the spacing between lines. For example if you want the lines to be drawn with 30 arcseconds between:</p>
+
+<code>ax.coords['ra'].set_ticks(spacing=30 * u.arcsec)</code>
+
+<p>The complete script is as follow:</p>
+
+
+<pre><code class="language-python">from astropy.io import fits
+from astropy.wcs import WCS
+from astropy import units as u
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+ 
+hdul = fits.open('656nmos.fits')
+img = hdul[0].data
+wcs = WCS(hdul[0].header)
+hdul.close()
+
+ax = plt.subplot(projection=wcs)
+
+ax.coords['ra'].set_major_formatter('dd:mm:ss')
+ax.coords['dec'].set_major_formatter('dd:mm')
+
+ax.coords['ra'].set_ticks(spacing=30 * u.arcsec)
+ax.coords['dec'].set_ticks(spacing=30 * u.arcsec)
+
+plt.imshow(img, cmap='gray', norm=LogNorm())
+plt.grid(color='lightblue', ls='dotted')
+plt.xlabel('RA')
+plt.ylabel('Dec')
+plt.show()
+</code></pre>
+
+<div style="text-align: center;"><img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/astropy-fits-2.png" alt="Pillars of Creation from FITS file with WCS" style="padding: 5px 10px 10px 10px;"></div>
+
+</body>
+</html>

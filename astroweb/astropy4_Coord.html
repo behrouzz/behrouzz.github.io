@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Astropy Coordinates</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Astropy Coordinates</h1>
+
+<p>When we talk about coordinates in astronomy, we mean a point or an array of points in the sky. In most cases, not always, the coordinates of a point in the sky is expressed by two numbers. For example, most star catalogs store coordinates of stars by in the ICRS frame. To express the coordinate of an object in ICRS, you need two numbers, <em>RA</em> and <em>DEC</em>. If you use the Galactic frame, the two numbers should be expressed as <em>L</em> and <em>B</em>.</p>
+
+<h2>Basic <code>SkyCoord</code> object</h2>
+
+<p>In astropy, we use the <code>SkyCoord</code> class from the <code>coordinates</code> subpackage to represent a point or an array of poins in the sky. The arguments depend on the frame you choose. For example, if you choose the frame as <code>'icrs'</code> you have to provide arguments <code>ra</code> and <code>dec</code>. Both <code>ra</code> and <code>dec</code> are angles, so their unit should be an angle unit, such as degrees, radians, etc. You can also pass them as numerical values, but in this case you have to indicate their unit by passing the chosen unit to the <code>unit</code> argument.</p>
+
+
+<p>In the example below, we pass <code>ra</code> and <code>dec</code> as quantities:</p>
+
+<pre><code class="language-python">>>> import astropy.units as u
+>>> from astropy.coordinates import SkyCoord
+>>> c = SkyCoord(ra=101.287*u.deg, dec=-16.716*u.deg, frame='icrs')
+>>> c
+&lt;SkyCoord (ICRS): (ra, dec) in deg
+    (101.287, -16.716)&gt;
+</code></pre>
+
+<p>We can also pass <code>ra</code> and <code>dec</code> as numerical values and explicitly indicate unit in the <code>unit</code> argument:</p>
+
+<pre><code class="language-python">>>> c = SkyCoord(ra=101.287, dec=-16.716, unit='degree', frame='icrs')
+>>> c
+&lt;SkyCoord (ICRS): (ra, dec) in deg
+    (101.287, -16.716)&gt;
+</code></pre>
+
+<p>The coordinates arguments should be chosen wisely according to the <code>frame</code>. Let's create a <code>SkyCoord</code> object in the Galactic frame:</p>
+
+<pre><code class="language-python">>>> c = SkyCoord(l=227.23012017*u.deg, b=-8.89036478*u.deg, frame='galactic')
+>>> c
+&lt;SkyCoord (Galactic): (l, b) in deg
+    (227.23012017, -8.89036478)&gt;
+</code></pre>
+
+<p>The easiest way to transfrom the coordinates to aother frame is to use the name of the frame as attribute:</p>
+
+<pre><code class="language-python">>>> c = SkyCoord(ra=101.287*u.deg, dec=-16.716*u.deg, frame='icrs')
+>>> c.galactic
+&lt;SkyCoord (Galactic): (l, b) in deg
+    (227.23012017, -8.89036478)&gt;
+</code></pre>
+
+<h2>The coordinates components</h2>
+
+<P>You can get each of the coordinates components from the <code>SkyCoord</code> object using attributes. The result will be a quantity corresponding to that component. In the example below, <code>.ra</code> attribute returns a <code>Longitude</code> object, while <code>.dec</code> attribute returns a <code>Latitude</code> object.</p>
+
+<pre><code class="language-python">>>> c = SkyCoord(ra=101.287*u.deg, dec=-16.716*u.deg, frame='icrs')
+>>> c.ra
+&lt;Longitude 101.287 deg&gt;
+>>> c.dec
+&lt;Latitude -16.716 deg&gt;
+</code></pre>
+
+<p>If you want to get back the numerical value of a coordinate component in degrees or in radians, use <code>.deg</code> or <code>.rad</code> after the component attribute:</p>
+
+<pre><code class="language-python">>>> c.ra.deg
+101.287
+>>> c.ra.rad
+1.7677916394674966
+</code></pre>
+
+<p>You can alse get back the coordinates in some string formats using <code>.to_string()</code> method:</p>
+
+<pre><code class="language-python">>>> c = SkyCoord(ra=101.287*u.deg, dec=-16.716*u.deg, frame='icrs')
+>>> c.to_string('decimal')
+'101.287 -16.716'
+>>> c.to_string('dms')
+'101d17m13.2s -16d42m57.6s'
+>>> c.to_string('hmsdms')
+'06h45m08.88s -16d42m57.6s'
+</code></pre>
+
+<h2>Advanced <code>SkyCoord</code> object</h2>
+
+<p>As explanied above, you can create a <code>SkyCoord</code> object by passing just two coordinates components, such as <code>ra</code> and <code>dec</code>. Sometimes you may have more information about the body. Adding these optional informations, make the coordination object more powerfull. Some common optional arguments are:
+
+<ul>
+  <li><code>distance</code>: distance to the frame origin</li>
+  <li><code>radial_velocity</code>: radial velocity with respect to the frame origin</li>
+  <li><code>pm_ra_cosdec</code> and <code>pm_dec</code>: proper motion</li>
+  <li><code>obstime</code>: time of observation</li>
+  <li><code>location</code>: location of observation site on the Earth</li>
+  <li><code>temperature</code>: temperature at observation site</li>
+  <li><code>pressure</code>: pressure at observation site</li>
+</ul></p>
+
+<p>We introduce only <code>distance</code>, <code>obstime</code> and <code>location</code> in this section. Other arguments will be covered in later chapters.</p>
+
+<h3>Adding distance</h3>
+
+Perhaps you know the distance of the body from the frame origin. For example, we know that the distance of the star <em>Sirius</em> from the Solar System barycenter is about 8.6 light years. We can pass <code>distance</code> argument as follow::</p>
+
+<pre><code class="language-python">>>> c = SkyCoord(
+	ra=101.287155333 * u.deg,
+	dec=-16.716115861 * u.deg,
+	frame='icrs',
+	distance=8.6 * u.lyr
+	)
+>>> print(c)
+&lt;SkyCoord (ICRS): (ra, dec, distance) in (deg, deg, lyr)
+    (101.28715533, -16.71611586, 8.6)&gt;
+</code></pre>
+
+<p>Now, we have a more powerful object. We can, for example, get not only galactic, but also galactocentric coordinates:</p>
+
+<pre><code class="language-python">>>> c.galactocentric
+&lt;SkyCoord (Galactocentric: galcen_coord=<ICRS Coordinate: (ra, dec) in deg
+    (266.4051, -28.936175)>, galcen_distance=8.122 kpc, galcen_v_sun=(12.9, 245.6, 7.78) km / s, z_sun=20.8 pc, roll=0.0 deg): (x, y, z) in lyr
+    (-26496.10721763, -6.23731206, 66.52622131)&gt;
+</code></pre>
+
+<p>Using <code>.cartesian</code> attribute, we can get a <code>CartesianRepresentation</code> object of the coodinates. This new object, have certain attributes such as <code>.x</code>, <code>.y</code> and <code>.z</code>:</p>
+
+<pre><code class="language-python">>>> c.cartesian
+&lt;CartesianRepresentation (x, y, z) in lyr
+    (-1.61211497, 8.07727075, -2.47361731)&gt;
+>>> c.cartesian.x
+&lt;Quantity -1.61211497 lyr&gt;
+</code></pre>
+
+<h3>Adding time of observation</h3>
+
+<p>When you create a basic <code>SkyCoord</code> object, you do not indicate the observation time. Sometimes it does not make sens at all. But what if we want to get the geocentric position of a body? We can use <code>.gcrs</code> attribute to convert the coordinates from ICRS to GCRS. Let's see what happens in a simple case:</p>
+
+<pre><code class="language-python">>>> c = SkyCoord(ra=101.2872 * u.deg, dec=-16.7161 * u.deg)
+>>> c.gcrs
+&lt;SkyCoord (GCRS: obstime=J2000.000, obsgeoloc=(0., 0., 0.) m, obsgeovel=(0., 0., 0.) m / s): (ra, dec) in deg
+    (101.2932251, -16.71644932)&gt;
+</code></pre>
+
+<p>The origin of ICRS is the barycenter of the Solar System, while the origin of GCRS is the barycenter of the Earth. So, when you want to convert ICRS coordinates to GCRS coordinates, you need to know the position of the Earth. Astropy uses an internal routine to find the position of the Earth. But the position of the Earth at which moment in the time? Note the phrase <code>obstime=J2000.000</code> in the above results. This is the time that astropy has chosen by default to calculate the position of the Earth in order to convert ICRS to GCRS. In other words, in the above example we got the geocentric coordinates of the body at the time <code>J2000.000</code>, i.e., the mid-day of January 1st 2000.</p>
+
+<p>But what if we want to find the geocentric coordinates of the body at our desired time? In this case, we can simply provide the <code>obstime</code> argument when creating the <code>SkyCoord</code> object. Note that we have to enter the time as an astropy <code>Time</code> object.<p>
+
+<pre><code class="language-python">>>> from astropy.time import Time
+>>> t = Time('2024-07-13 22:35:40', scale='utc')
+>>> c = SkyCoord(ra=101.2872*u.deg, dec=-16.7161*u.deg, obstime=t)
+>>> c.gcrs
+&lt;SkyCoord (GCRS: obstime=2024-07-13 22:35:40.000, obsgeoloc=(0., 0., 0.) m, obsgeovel=(0., 0., 0.) m / s): (ra, dec) in deg
+    (101.281485, -16.71506438)&gt;
+</code></pre>
+
+<p>This time astropy used our chosen time to convert ICRS to GCRS and you can see that the results are now different.</p>
+
+<h3>Adding observer location</h3>
+
+<p>You can add location of the observer on the Earth to the <code>SkyCoord</code> object. Like, most of the other arguments, you can do it whether at the time of creation of the object, or adding it after creation using <code>.location</code> attribute. The location of the observer should be an instance of the <code>EarthLocation</code> class. The simplest way to create a location on the earth, is to pass longitude and latitude arguments to <code>EarthLocation</code>. Let's say the location of the observer is in Paris:</p>
+
+<pre><code class="language-python">>>> from astropy.coordinates import EarthLocation
+>>> loc_paris = EarthLocation(lat=48.8575*u.deg, lon=2.3514*u.deg)
+>>> print(loc_paris)
+(4200841.89608465, 172498.0280838, 4780147.19272296) m
+</code></pre>
+
+<p>There's a third argument <code>height</code>, which is optional and it defaluts to the surface of the geoid.</p>
+
+<p>One advantage of adding location of the observer to the <code>SkyCoord</code> object, is that you can convert it very easy to Altitude-Azimuth system of coordinates using <code>.altaz</code> attribute. The simple example below, shows how to find the observed coordinates of the star <em>Sirius</em> for an observer in Paris in December 15th 2024 at 23:55:30.</p>
+
+<pre><code class="language-python">import astropy.units as u
+from astropy.time import Time
+from astropy.coordinates import SkyCoord, EarthLocation
+
+loc_paris = EarthLocation(lat=48.8575*u.deg, lon=2.3514*u.deg)
+
+t = Time('2024-12-15 23:55:30')
+
+c = SkyCoord(ra=101.287155333 * u.deg,
+             dec=-16.716115861 * u.deg,
+             frame='icrs',
+             location=loc_paris,
+             obstime=t)
+
+az = c.altaz.az.deg
+alt = c.altaz.alt.deg
+
+print(f'Azimuth  : {az:.2f}')
+print(f'Altitude : {alt:.2f}')
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+Azimuth  : 164.15
+Altitude : 23.02
+</pre>
+
+Accounting for Space Motion
+
+https://docs.astropy.org/en/stable/coordinates/apply_space_motion.html
+
+
+
+</body>
+</html>

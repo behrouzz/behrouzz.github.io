@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Astropy - Quantities and Constants</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Astropy Python Package</h1>
+
+<p>I've never seen an astronomical library more comprehensive than <a href="https://www.astropy.org/" target="_blank" rel="nofollow noopener">astropy</a>. It is created by great teams and is very well <a href="https://docs.astropy.org/en/stable/index.html" target="_blank" rel="nofollow noopener">documented</a>. It consists of several modules for dealing with time, coordinates, tables, quantities, models, etc. Some of its functionalities make your everyday life really easy, such as using constants, unit conversions and handling FITS files.</p>
+
+<h2>Quantities and Constants</h2>
+
+<h3>Quantities</h3>
+
+<p>Physical quantities have two parts: <em>unit</em> and <em>value</em>. For example, when we say that the speed of light in vacuum is 299792458 m/s, we are talking about a quantity, <em>speed</em>, which has two parts: its unit is <em>metres per second</em> and its value is <em>299792458</em>. You can create this quantity in astropy as follow:</p>
+
+<pre><code class="language-python">>>> import astropy.units as u
+>>> speed = 299792458 * u.Unit('m/s')
+>>> print(speed)
+299792458.0 m / s
+</code></pre>
+
+<p>Note that we passed the unit as a string. We could also use units as follows:</p> 
+
+<pre><code class="language-python">>>> speed = 299792458 * u.m / u.s
+</code></pre>
+
+You can access the unit and the value of a quantity by using <code>.unit</code> and <code>.value</code> attributes:</p>
+
+<pre><code class="language-python">>>> print(speed.unit)
+m / s
+>>> print(speed.value)
+299792458.0
+</code></pre>
+
+<p>One advantage of using quantities, is that you can convert them to other units using <code>.to()</code> method. Let's find the speed of light in km/h:</p>
+
+<pre><code class="language-python">>>> print(speed.to('km/h'))
+1079252848.8 km / h
+</code></pre>
+
+<h3>Constants</h3>
+
+<p>Another useful module in astropy is <code>constants</code>. This module provides predefined quantities with units and fixed values. Let me show it with an example. We want to find the Newtonian gravitational force between the Earth and the Sun:</p>
+
+\[ F = G \frac{M_{earth} \times M_{sun}}{r^{2}}\]
+
+<p>We can create each of these quantities as explained above, but the <code>constants</code> module has already defined them, so we can use them directly after importing them from the module. Here, first of all, we import the gravitational constant <code>G</code>, mass of the Earth <code>M_Earth</code>, mass of the Sun <code>M_sun</code> and the Astronomical Unit <code>au</code> which is the average Earth-Sun distance. Then we use these constants in the formula:</p>
+
+<pre><code class="language-python">>>> from astropy.constants import G, M_earth, M_sun, au
+>>> f = G * (M_earth * M_sun) / au**2
+>>> print(f)
+3.541545424043141e+22 kg m / s2
+</code></pre>
+
+<p>The resulting unit is <code>kg m / s2</code> which is newton. Remember \(F=m a\), or if you want to be sure convert it to newton directly with <code>.to()</code> method:</p>
+
+<pre><code class="language-python">>>> print(f.to('N'))
+3.541545424043141e+22 N
+</code></pre>
+
+<p>You can find other useful constants <a href="https://docs.astropy.org/en/stable/constants/index.html#module-astropy.constants" target="_blank" rel="nofollow noopener">here</a>.</p>
+
+Besides the contants, astropy lets you use some predefined units. For example, the mass of the earth in a constant whose unit is <code>kg</code>. We want find to the mass of the Earth expressed in solar mass <code>solMass</code>:
+
+<pre><code class="language-python">>>> print(M_earth.value, M_earth.unit)
+5.972167867791379e+24 kg
+>>> print(M_earth.to(u.Msun))
+3.003489348850793e-06 solMass
+</code></pre>
+
+<h3>Quantities as Ranges</h3>
+
+<p>Astropy lets you create a range of quantities. This is very useful with <code>numpy</code>. Suppose that we want to find the kitenic enery of a mass of 5 kg with different velocities, from zero to 100 km/s. WE can first create our desired range with <code>numpy</code>, then create the range of quantities by multipling the range by our desired unit.</p>
+
+<pre><code class="language-python">import numpy as np
+import astropy.units as u
+
+m = 5 * u.kg
+v = np.arange(0, 110, 25) * u.Unit('m/s')
+f = 0.5 * m * v**2
+
+print(f)
+print(f.to('J'))
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+[    0.   1562.5  6250.  14062.5 25000. ] kg m2 / s2
+[    0.   1562.5  6250.  14062.5 25000. ] J
+</pre>
+
+</body>
+</html>

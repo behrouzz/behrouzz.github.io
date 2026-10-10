@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Earth Orientation Parameters</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Earth Orientation Parameters (EOP)</h1>
+
+<p>Suppose that you have found a star in an astronomical catalogue and you want to know where can you find this star in the sky, in a certain moment of time and in a certain location on the Earth. This is a common process in astronomy and you have to follow a chain of calculations as follows:</p>
+
+<code>ICRS -> GCRS -> CIRS -> Observed</code>
+
+<p>The first step is to convert the catalogue coordinates that are usually expressed as IRCS to GCRS. This step is simple and straight-forward. You need to consider some factors, such as the Earth position, space motion, parallax of the star, light deflection by the Sun and other planets, and abberation. Whether to apply all of these factors or just use some of them depends on the precision required.</p>
+
+<p>The second step, however, can be complicated. Celestial Intermediate Reference System (CIRS) is a new defined system and as the name suggests, it acts as an intermadiate system to convert celectial GCRS to terrestial observed and vice versa. It does not rotate with the Earth. The center of the Frame is the barycenter of the Earth. The x axis is defined by a point of the True equator, called Celestial Intermediate Origin (CIO). So, the right ascension is measured from this point. The z axis is defined by instananous celestial north pole, which is officially called, Celestial Intermediate Pole (CIP). The y axis can be found by applying the righ-handed rule. So, the problem is to find these two points: CIO and CIP. First, we find the CIP coordinates.</p>
+
+<p>In order to find X and Y, the coordinates of the CIP, we need to calculate Bias-Precession-Nutation (BPN) matrix. The function <code>pnm06a</code> return this matrix for any given time:<p>
+
+<code>
+r = erfa.pnm06a(tt1, tt2)
+</code>
+
+<p>If you pass the BPN matrix to the function <code>bpn2xy</code>, it returns the coordinates of the CIP:</p>
+
+<code>
+x, y = erfa.bpn2xy(r)
+</code>
+
+<p>The values <code>x</code> and <code>y</code> have been calculated by IAU models. In fact, the two models are: IAU 2000 precession and IAU 2006 nutation. Although these model works well for prediction precession and nutation, but the Earth has another type of movement, called <em>polar motion</em> that is not predictable. So, if we need very high precision, we have to find something else with observation.</p>
+
+<br>
+<a href="https://www.iers.org/IERS/EN/Publications/Bulletins/bulletins.html" target="_blank" rel="nofollow noopener">Bulletins</a>
+<br>
+<a href="https://www.iers.org/IERS/EN/DataProducts/EarthOrientationData/eop.html" target="_blank" rel="nofollow noopener">Data</a>
+
+<p>https://hpiers.obspm.fr/iers/bul/bulb_new/bulletinb.pdf :<p>
+<p>"IERS Bulletins A and Bulletin B/C04 provide values of the Earth's orientation parameters in the IERS Reference System including UT1-UTC, coordinates of the terrestrial pole, and celestial pole offsets. Bulletin A is issued weekly by the IERS Rapid Service/Prediction Center at the U.S. Naval Observatory, Washington, DC. It provides the most recently observed estimates as well as predictions of Earth Orientation Parameters (EOPs). Bulletin B/C04 is issued monthly by the IERS Earth Orientation Centre (EOC) at the Paris Observatory, and provides daily data covering a period from several decades to 30 days previous to the date of publication."</p>
+
+
+<p><b>Bulletin A</b> contains Earth orientation parameters x/y pole, UT1-UTC and their errors at daily intervals and predictions for 1 year into the future.The contents of IERS Bulletin A are divided into four sections:
+
+1. General information including key definitions and the most recently adopted values of DUT1 and TAI-UTC.
+2. Quick-look daily estimates of the EOPs determined by smoothing the observed data. This involves the application of systematic corrections and statistical weighting. The results are published with a delay of about one to three days between the date of publication and the last available date with estimated EOP.
+3. Predictions of x, y, and UT1-UTC, up to 365 days following the last day of data. The predictions use similar algorithms based on seasonal filtering and autoregressive processing for x, y, and UT1.
+4. The combination series for the celestial pole offsets. Bulletin A contains celestial pole offsets with respect to the IAU1980 Nutation theroy (dpsi and deps) and the IAU 2000 Resolutions (dX and dY), beginning on 1 January 2003.</p>
+
+<p><b>Bulletin B</b> provides current information on the Earth's orientation in the IERS Reference System. This includes Universal Time, coordinates of the terrestrial pole, and celestial pole offsets.</p>
+
+<p><b>Bulletin C</b> Contains announcements of the leap seconds in UTC and information on UTC-TAI</p>
+
+<p><b>Bulletin D</b> Contains announcements of the value of DUT1=UT1-UTC</p>
+
+<p>kh: objective: UT1-UTC stays smaller than 0.9s in absolute value</p>
+
+
+
+<pre><code class="language-python">>>> from astropy.utils.iers import IERS_A
+>>> iers = IERS_A.open()
+>>> iers.pprint(max_lines=10)
+year month day   MJD   PolPMFlag_A ... PolPMFlag dX_2000A dY_2000A NutFlag
+                  d                ...           marcsec  marcsec         
+---- ----- --- ------- ----------- ... --------- -------- -------- -------
+  73     1   2 41684.0           I ...         B  -18.637   -3.667       B
+  73     1   3 41685.0           I ...         B  -18.636   -3.571       B
+ ...   ... ...     ...         ... ...       ...      ...      ...     ...
+  25     8  14 60901.0           P ...         P      nan      nan       0
+  25     8  15 60902.0           P ...         P      nan      nan       0
+  25     8  16 60903.0           P ...         P      nan      nan       0
+Length = 19220 rows
+</code></pre>
+
+<p>Let's see only the columns that we are interested in:</p>
+
+<pre><code class="language-python">>>> iers[['MJD', 'PM_x_A', 'PM_y_A', 'UT1_UTC_A', 'dX_2000A_A', 'dY_2000A_A']].pprint(max_lines=10)
+  MJD    PM_x_A   PM_y_A  UT1_UTC_A dX_2000A_A dY_2000A_A
+   d     arcsec   arcsec      s      marcsec    marcsec  
+------- -------- -------- --------- ---------- ----------
+41684.0 0.120733 0.136966 0.8084178     -0.766      -0.72
+41685.0  0.11898 0.135656 0.8056163     -0.751     -0.701
+    ...      ...      ...       ...        ...        ...
+60901.0 0.170264 0.373618 0.0868937        nan        nan
+60902.0 0.170807 0.373041 0.0871286        nan        nan
+60903.0 0.171334 0.372454 0.0876208        nan        nan
+Length = 19220 rows
+</code></pre>
+
+<p>Explain here...</p>
+
+<p>Get earth orientation parameters for a given time.</p>
+
+<pre><code class="language-python">from astropy.time import Time
+from astropy.utils.iers import IERS_A
+
+iers = IERS_A.open()
+
+t = Time('2024-02-10 22:32:37', scale='utc')
+
+# UT1-UTC (s)
+dut1 = iers.ut1_utc(t)
+
+# x and y components of polar motions for a given time (arcsec)
+px, py = iers.pm_xy(t)
+
+# x and y components of CIP correction for a given time (mas)
+dx, dy = iers.dcip_xy(t)
+
+print('UT1-UTC :', dut1)
+print('PM_X    :', px)
+print('PM_Y    :', py)
+print('dX_2000 :', dx)
+print('dY_2000 :', dy)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+UT1-UTC : 0.0024673298506944445 s
+PM_X    : 0.04712121008101852 arcsec
+PM_Y    : 0.2370752777662037 arcsec
+dX_2000 : 0.3551845833333333 marcsec
+dY_2000 : -0.1953931712962963 marcsec
+</pre>
+
+<h2>LeapSeconds</h2>
+
+<p>To get leap seconds:</p>
+
+<pre><code class="language-python">from astropy.utils.iers import LeapSeconds
+
+ls = LeapSeconds.open()
+
+ls.pprint()
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+  mjd   day month year tai_utc
+------- --- ----- ---- -------
+41317.0   1     1 1972      10
+41499.0   1     7 1972      11
+41683.0   1     1 1973      12
+42048.0   1     1 1974      13
+42413.0   1     1 1975      14
+42778.0   1     1 1976      15
+43144.0   1     1 1977      16
+43509.0   1     1 1978      17
+43874.0   1     1 1979      18
+44239.0   1     1 1980      19
+    ... ...   ...  ...     ...
+48804.0   1     7 1992      27
+49169.0   1     7 1993      28
+49534.0   1     7 1994      29
+50083.0   1     1 1996      30
+50630.0   1     7 1997      31
+51179.0   1     1 1999      32
+53736.0   1     1 2006      33
+54832.0   1     1 2009      34
+56109.0   1     7 2012      35
+57204.0   1     7 2015      36
+57754.0   1     1 2017      37
+Length = 28 rows
+</pre>
+
+<p>Example: get leap seconds for mjd=55000</p>
+
+<pre><code class="language-python">>>> from astropy.utils.iers import LeapSeconds
+>>> ls = LeapSeconds.open()
+>>> mjd = 55000
+>>> lp = ls[ls['mjd']<=mjd][-1]['tai_utc']
+>>> print(lp)
+34
+</code></pre>
+
+
+
+<h2>Historical parameters</h2>
+
+<p>jhjhjh</p>
+
+<pre><code class="language-python">from iers import EOP
+
+e = EOP(kind=3)
+#e.download()
+df = e.read_table()
+print(df)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+            mjd        px        py    ut1_tai        dx        dy        lod
+0     -4703.268 -0.056700 -0.100900  99.990000  0.000000  0.000000  99.990000
+1     -4666.744 -0.156690 -0.190890  99.990000  0.000000  0.000000  99.990000
+2     -4630.220 -0.256680 -0.240880  99.990000  0.000000  0.000000  99.990000
+3     -4593.695 -0.276670 -0.110870  99.990000  0.000000  0.000000  99.990000
+4     -4557.171 -0.226660 -0.010860  99.990000  0.000000  0.000000  99.990000
+...         ...       ...       ...        ...       ...       ...        ...
+3127  60437.643  0.010991  0.415808 -37.019925  0.000276 -0.000096   0.000064
+3128  60455.905  0.027417  0.440664 -37.020889  0.000390 -0.000112   0.000033
+3129  60474.167  0.049517  0.467463 -37.017536  0.000331 -0.000077  -0.000543
+3130  60492.429  0.091880  0.478419 -37.001695  0.000082 -0.000001  -0.001060
+3131  60510.691  0.138045  0.473736 -36.986672  0.000114 -0.000002  -0.000439
+
+[3132 rows x 7 columns]
+</pre>
+
+<p>Interpolate...</p>
+
+<pre><code class="language-python">from iers import EOP
+
+eop = EOP(kind=3)
+
+dc = eop.interpolate(mjd=-4600)
+
+for k, v in dc.items():
+    print(k, ':', v)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+px : -0.27321929637234765
+py : -0.13331252019165024
+ut1_tai : 99.99
+dx : 0.0
+dy : 0.0
+lod : 99.99
+</pre>
+
+
+</body>
+</html>

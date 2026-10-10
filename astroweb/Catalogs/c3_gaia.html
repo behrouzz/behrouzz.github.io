@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Gaia Archive</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Gaia Archive</h1>
+
+<p>Explaine Gaia here... </p>
+
+<p>The results of Gaia survey has been published in two main types of data: <em>tabular</em> and <em>ancillary</em>. The <em>tabular</em> data can be retrieved easily with TAP queries. The <em>ancillary</em> data are files that contain non-tabular information, such as sprectra and epoch photomerties.<p>
+
+<h2>Retrieve tabular data</h2>
+
+<p>As other surveys and catalogues, you can retrieve Gaia tabular data from VizieR. But we recommend using Gaia Archive instead of VizieR, because you will have more options. There are multiple ways to access Gaia tabular data. You can directly visit <a href="https://gea.esac.esa.int/archive/" target="_blank" rel="nofollow noopener">Gaia Archive website</a> and get data from it. You can also use their API with a command-line tool such as <code>curl</code> or a python function such as our own <code>sql2df</code>. Here, we recommend using astroquery.</p>
+
+<p>Before going into details, let's have a look at the Gaia Archive database. Here, we talk about the latest verion, which is Data Release 3. The main table is <em>gaia_source</em>. It contains about about 1.8 billion entries and 153 columns. It is realy huge and querying this table can be very time consuming. A lighter version of this table has been provided named <em>gaia_source_lite</em>. This lighter table has the same number of rows, but instead of 153 columns, it has 52 columns which are the most import ones. So, it is recommended to use <em>gaia_source_lite</em>, unless you look for some information that is not present in it.</p>
+
+<p>Each observed source in Gaia Archive is identified with a <em>source_id</em>. This is a column that is present in almost all tables. Besides the main table, there are lots of other tables that you may be interested in. For example, the <em>astrophysical_parameters</em> table contains one-dimensional astrophysical parameters of about 1.6 billion objects. The <em>galaxy_candidates</em> table describes parameters of about 4.8 million sources considered as galaxy candidates. The <em>qso_candidates</em> table containes more than 6.6 million sources considered as quasars. The table <em>vari_cepheid</em> describes more than 15000 Cepheid stars. If you are interested in Solar system astronomy, you may want to look at the <em>sso_observation</em> table that has information for about 23 million Solar system objects. When using the name of these tables in ADQL queries, you should add <code>gaiadr3.</code> prefix to their names. For example, the name of the main table, when used in an ADQL query, should be <code>gaiadr3.gaia_source</code>.</p>
+
+<h3>Regional Search</h3>
+
+<p>If you want to retrieve all of the objects in a certain region in the sky, you can use <code>cone_search</code> or <code>query_object</code>. There is no important difference between these two functions. So, we introduce <code>cone_search</code>. You should pass the coordinates of the center of the region to <code>coordinate</code> argument and pass radius of the region to <code>radius</code> argument. There is an optional argument, <code>columns</code>, that lets you specify the columns that you want to be retreieved. If you don't use this argument, all columns be will downloaded. The following example shows how to retrieve all Gaia objects in region indicated by a central point with one arcminute radius. We have chosen just the identifiers and coordinates to be downloaded.</p>
+
+<pre><code class="language-python">import astropy.units as u
+from astropy.coordinates import SkyCoord
+from astroquery.gaia import Gaia
+
+c = SkyCoord(ra=202.96, dec=55.19, unit='deg')
+
+job = Gaia.cone_search_async(
+    coordinate=c,
+    radius=1*u.arcmin,
+    columns=['source_id', 'ra', 'dec']
+    )
+
+table = job.get_results()
+print(table)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+     source_id              ra                dec                 dist        
+                           deg                deg                             
+------------------- ------------------ ------------------ --------------------
+1565142436929886848   202.959775550155 55.194395294762245 0.004397293511495144
+1565142471289625344 202.96626670992717  55.20486237068378  0.01528717884686336
+1565142054676249472 202.94590795339838  55.17595410869616  0.01618634847031297
+</pre>
+
+<p>Note that the function <code>cone_search</code> returns an astroquery <code>Job</code> object. You have to apply the <code>.get_results()</code> method on it to get the results as an astropy table. You may also have noticed that one extra column, <code>dist</code>, has been added to the results. This is the angular distance to the center point that we have provided. The results are sorted by the value of this column in ascending order.</p>
+
+<p>You may encounter two limitations. First, the Gaia database is really huge, so, if you define a vast region in sky, you may encounter a timeout error. This is where asynchronous queries become useful. Some of the astroquery functions have asynchronous versions. They are indicated with <code>_async</code> suffix. In the example above, you can use <code>cone_search_async</code> instead of <code>cone_search</code>. Everything else remains the same. When you use asynchronous queries, the server executes your request but it will return the results when they are ready. It does not matter how much time does it take. In the other hand, When you use normal synchronous queries, the results are generated as soon as you send the request. In this case, if it takes more than a cetrain seconds of time, you may encounter timeout error. So, consider to use asynchronous queries when you think that the results may contain thousands rows or it may take a lot of time for the server to execute it.</p>
+
+<p>The second limitation is that you can not filter the results with the <code>cone_search</code> function. All of the Gaia objects that exist in the region will be returned. The best way to overcome this limitation and many other kinds of limitations, is to use Tap queries.</p>
+
+
+<h3>Tap Queries</h3>
+
+<p>You can do tap queries on Gaia Archive website, with astroquery, or directly using the api with our own <code>sql2df</code> function. We recommend using astroquery because it enables us to use asynchronous queries.</p>
+
+<p>The function that should be used to execute TAP queries is <code>launch_job</code>. We recommend using its asynchronous version, which is <code>launch_job_async</code>. The example below shows a simple use of this function:</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+
+query= """
+SELECT TOP 5 source_id, ra, dec
+FROM gaiadr3.gaia_source_lite
+"""
+
+job = Gaia.launch_job_async(query)
+
+table = job.get_results()
+print(table)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Query finished. [astroquery.utils.tap.core]
+     source_id              ra                 dec        
+                           deg                 deg        
+------------------- ------------------ -------------------
+4049227963393675648  273.1215893281507 -30.421897408333983
+4049227963393679488  273.1169936763476  -30.42467872191916
+4049227963393683712   273.117195020679 -30.423892281483266
+4049227963393684480  273.1148887576777  -30.42528238053385
+4049227963393686144 273.11926810118115 -30.421032869987084
+</pre>
+
+<p>In the first line of the results, you can see an info message. This is because we used an asynchronous query. This message appears in the output when the reqest has been executed by the server.</p>
+
+<p>You may also have noticed that in the query string we got the data from the <code>gaia_source_lite</code> table, instead of <code>gaia_source</code>. In fact, both <code>gaia_source</code> and <code>gaia_source_lite</code> have about 1.8 billion observed sources. The only difference is the number of columns. The <code>gaia_source</code> table has 153 columns which makes quiering very time consuming. The <code>gaia_source_lite</code> is the reduced version with 52 columns that are the most important ones. So, it is recommended to use <code>gaia_source_lite</code>, unless you look for some information that is not present in the lighter table.</p>
+
+<p>Now, let's get try again the example that we executed earlier with <code>cone_search</code> function. This time, we want to do the same job as a TAP query. For regional search, we should use the <code>CONTAINS</code> function of ADQL. Note that this function accepts radius in degrees.</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+
+ra = 202.96
+dec = 55.19
+r = 1 / 60
+
+query= f"""
+SELECT source_id, ra, dec
+FROM gaiadr3.gaia_source_lite
+WHERE CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra}, {dec}, {r})) = 1
+"""
+
+job = Gaia.launch_job_async(query)
+
+table = job.get_results()
+print(table)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>INFO: Query finished. [astroquery.utils.tap.core]
+     source_id              ra                dec        
+                           deg                deg        
+------------------- ------------------ ------------------
+1565142054676249472 202.94590795339838  55.17595410869616
+1565142436929886848   202.959775550155 55.194395294762245
+1565142471289625344 202.96626670992717  55.20486237068378
+</pre>
+
+<p>The results are not exactly as what we got with the <code>cone_search</code> function. The <code>dist</code> columns is missing, because when using TAP queries, only the columns specified in front of the <em>SELECT</em> keyword will be returned. The solution is to use an ADQL function named <code>DISTANCE</code>. It accepts two points as arguments and returns the angular distance between them. We can see this function in our query string, then order the results it.</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+
+ra = 202.96
+dec = 55.19
+r = 1 / 60
+
+query= f"""
+SELECT source_id, ra, dec, DISTANCE(POINT(ra, dec), POINT({ra}, {dec})) AS dist
+FROM gaiadr3.gaia_source_lite
+WHERE CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra}, {dec}, {r})) = 1
+ORDER by dist
+"""
+
+job = Gaia.launch_job_async(query)
+
+table = job.get_results()
+print(table)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Query finished. [astroquery.utils.tap.core]
+     source_id              ra                dec                  dist        
+                           deg                deg                              
+------------------- ------------------ ------------------ ---------------------
+1565142436929886848   202.959775550155 55.194395294762245 0.0043971617219551356
+1565142471289625344 202.96626670992717  55.20486237068378  0.015286694818981395
+1565142054676249472 202.94590795339838  55.17595410869616  0.016187171771579693
+</pre>
+
+<p>Now, the results are exactly the same as what we got with the <code>cone_search</code> function.</p>
+
+<p>By now, we just did what we have already done with the <code>cone_search</code> function. Let's take a step further and filter the results based on some columns. We also want to make the sky region much larger: instead of a region with 1 arcminute radius, we search in a region with 10 arcdegrees of radius. There are about 100,000 objects in this region, but we want only the objects for which the radial velocity has been measured and their parallax are greater than 50 milliarcseconds, i.e., they are near us.</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+
+ra = 202.96
+dec = 55.19
+r = 10
+
+query= f"""
+SELECT source_id, ra, dec, radial_velocity, DISTANCE(POINT(ra, dec), POINT({ra}, {dec})) AS dist
+FROM gaiadr3.gaia_source_lite
+WHERE radial_velocity IS NOT NULL
+AND parallax > 50
+AND CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra}, {dec}, {r})) = 1
+ORDER BY dist
+"""
+
+job = Gaia.launch_job_async(query)
+
+table = job.get_results()
+print(table)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Query finished. [astroquery.utils.tap.core]
+     source_id              ra         ... radial_velocity        dist      
+                           deg         ...      km / s                      
+------------------- ------------------ ... --------------- -----------------
+1510834911934401152 208.00294477888406 ...       -45.45837 6.066725702392611
+1554835340053676800 197.23107831141087 ...       11.015882  7.04364467161693
+1661568850770761600  209.3832813779638 ...      -26.536613 7.140933600823656
+1568219729458240128 191.05782946985116 ...        9.179076 7.857787289602064
+1554433777791815808 197.54841703158766 ...      -11.916604 8.159873911892234
+1604859511344724864  216.2974561533579 ...      -10.912974  8.58747393694927
+1604859408265509632 216.29652899703083 ...      -10.589818 8.596105126161167
+1503625448550796032 204.85015439447483 ...       -65.71527  9.08018306292017
+1605198298364601088 218.36887175001752 ...       11.167698 9.307927220707368
+</pre>
+
+<p>In a region with about 100,000 objects, we filtered the results so that we got 9 objects finally. This is why we strongly recommend using TAP queries.</p>
+
+<h2>User tables</h2>
+
+<p>Gaia Archive lets you upload you own table to their server. This is really helpful because it enables you to combine your table with Gaia tables. There are two ways you can upload a table: as <em>authenticated user</em> or as <em>anonymous user</em>.</p>
+
+<p>If you prefer to communicate with Gaia Archive as an authenticated user, you have to sign up on the <a href="https://gea.esac.esa.int/archive/" target="_blank" rel="nofollow noopener">Gaia Archive website</a> to have a username and password. Then, use that username and password in your script to login to Gaia Archive before uploading table or sending any kind of request. Authenticated access is not just for uploading tables, you can even perform normal queries, as we have explained above, after loging in with your username and password. The main advantage is that the results of your queries and the tables that you upload will remain on the server forever. For uploading a table as authenticated user, you should use the <code>.upload_table()</code> function. This function has three parameters: 
+<code>upload_resource</code> is the table object that you want to upload; <code>table_name</code> is the name that you give to the table to be used in your queries; <code>table_description</code> is a description about the table. You can upload a table from your hard disk, from a url or from as astropy table. Let's create a simple astropy table and upload it.</p>
+
+<pre><code class="language-python">from astropy.table import Table
+from astroquery.gaia import Gaia
+
+ids = [2653819129231880320, 3854775444998749568, 303312548948736384,
+       789430249033567744, 821368171297757952, 3093946285143653248]
+
+types = ['GALAXY', 'GALAXY', 'QSO', 'QSO', 'QSO', 'STAR']
+
+table = Table(data=[ids, types], names=['id', 'type'])
+
+Gaia.login(user='myUsername', password='myPassword')
+
+job = Gaia.upload_table(
+    upload_resource=table,
+    table_name="my_table",
+    table_description="This is for test"
+    )
+
+Gaia.logout()
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Login to gaia TAP server [astroquery.gaia.core]
+INFO: OK [astroquery.utils.tap.core]
+INFO: Login to gaia data server [astroquery.gaia.core]
+INFO: OK [astroquery.utils.tap.core]
+INFO: Sending pytable. [astroquery.utils.tap.core]
+INFO: Uploaded table 'my_table'. [astroquery.utils.tap.core]
+INFO: Gaia TAP server logout OK [astroquery.gaia.core]
+INFO: Gaia data server logout OK [astroquery.gaia.core]
+</pre>
+
+<p>Note that we named our table <code>my_table</code>. All uploaded tables can be accessed in this way: <em>user_UserName.TableName</em>. In our example, to access this table in our queries, we have to use its full name, which is <code>user_myUsername.my_table</code>. Now let's run a simple query on our table:</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+
+Gaia.login(user='myUsername', password='myPassword')
+
+job = Gaia.launch_job_async('SELECT * FROM user_myUsername.my_table')
+
+Gaia.logout()
+
+table = job.get_results()
+print(table)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Login to gaia TAP server [astroquery.gaia.core]
+INFO: OK [astroquery.utils.tap.core]
+INFO: Login to gaia data server [astroquery.gaia.core]
+INFO: OK [astroquery.utils.tap.core]
+INFO: Query finished. [astroquery.utils.tap.core]
+INFO: Gaia TAP server logout OK [astroquery.gaia.core]
+INFO: Gaia data server logout OK [astroquery.gaia.core]
+my_table_oid          id          type 
+------------ ------------------- ------
+           1 2653819129231880320 GALAXY
+           2 3854775444998749568 GALAXY
+           3  303312548948736384    QSO
+           4  789430249033567744    QSO
+           5  821368171297757952    QSO
+           6 3093946285143653248   STAR
+</pre>
+
+<p>As we told, if you want to use the <code>.upload_table()</code> function, you must login to Gaia with your username and password. However, you can upload a table <em>on-the-fly</em> anonymously and run a query on it at the same time. Whether you upload a table by loging to the server or upload a table <em>on-the-fly</em>, the objective is alway combine this table with some data from Gaia Archive.</p>
+
+<p>In the example below, we upload our own table anonymously and <em>on-the-fly</em> and we join it to the Gaia main table to retrieve some additional information; here, the coordinates. Note that we use the <code>upload_resource</code> argument of the <code>launch_job</code> function to upload our table. You should also pay attention to the naming convention of uploaded tables. We give a name to our table with the <code>upload_table_name</code> argument. When you upload a table <em>on-the-fly</em>, the full name would be <em>tap_upload.TableName</em>. In our case, name of the table is <code>my_table</code>, so to access it in the query, the full name will be <code>tap_upload.my_table</code>. 
+
+<pre><code class="language-python">from astropy.table import Table
+from astroquery.gaia import Gaia
+
+ids = [2653819129231880320, 3854775444998749568, 303312548948736384,
+       789430249033567744, 821368171297757952, 3093946285143653248]
+types = ['GALAXY', 'GALAXY', 'QSO', 'QSO', 'QSO', 'STAR']
+table = Table(data=[ids, types], names=['id', 'type'])
+
+query = """
+SELECT source_id, type, ra, dec
+FROM gaiadr3.gaia_source_lite AS gaia
+JOIN tap_upload.my_table AS my
+ON my.id=gaia.source_id
+"""
+
+job = Gaia.launch_job_async(
+    query=query,
+    upload_resource=table,
+    upload_table_name="my_table"
+    )
+
+tb = job.get_results()
+print(tb)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Query finished. [astroquery.utils.tap.core]
+     source_id       type          ra                 dec        
+                                  deg                 deg        
+------------------- ------ ------------------ -------------------
+2653819129231880320 GALAXY  338.6307332966891 -0.7612182656120201
+3854775444998749568 GALAXY  147.1127477596573   8.661355414703767
+ 303312548948736384    QSO 23.631314579903496  30.353158422551378
+ 789430249033567744    QSO  169.5448506692038    48.0367243709162
+ 821368171297757952    QSO 146.92364661681702   45.40433162733586
+3093946285143653248   STAR  126.5438552995637   6.839397030135967
+</pre>
+
+
+<h2>Cross Match</h2>
+
+<p>The main reason for uploading tables to the Gaia Archive is to be able to combine our data with that of the Gaia catalogue. Our uploading table may be a simple table as in the above examples, or it may be a complete catalogue. Cross-math is the action of combining catalogues.</p>
+<p>In the above examples, both tables, our own table and the Gaia table, had a commun column - <code>id</code> in our table and <code>source_id</code> in the Gaia table. This helped us to combine the tables very easily. In the real world, this is not alway the case. Sometimes, the catalogue that you want to combine with Gaia has a different identifier. It is not always easy to find out which object of this catalogue corresponds to an object in Gaia catalogue. Let's starts with the easy part.</p>
+
+<h3>Pre-computed cross-matches</h3>
+
+<p>The Gaia Archive has already prepared some tables to help users combine Gaia catalogue with some popular external catalogues, such as allWISE, Hipparcos, 2MASS, SDSS, etc. You can find cross-match tables on the Gaia Archive website, <em>SEARCH</em> tab, then <em>Advanced (ADQL)</em> tab, under <em>Cross match</em> namespace for each data release. For each external catalogue, Gaia Archive has probided two or three tables in the <em>Cross match</em> namespace. Typically, we'll use the one with <em>_best_neighbour</em> suffix. This is a table that lists each matched Gaia object with its best neighbour in the external catalogue. For example, if we want to combine Gaia with SDSS DR3, we will use the table <code>gaiadr3.sdssdr13_best_neighbour</code> in our query. This table has several columns, but two columns are essential for us: <em>source_id</em> which is the identifier of the object in Gaia, and <em>original_ext_source_id</em> which is the identifier of the object in the external catalogue, which is here, SDSS DR13.</p>
+
+<p>As a very simple example, suppose that you have the identifiers of some objects in the SDSS 13 catalogue and you want to find their identifiers in Gaia DR3:</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+
+sdss_ids = ('1237645879551066262', '1237645879578460255',
+            '1237645879578460271', '1237645941291614227')
+
+query = f"""
+SELECT source_id, original_ext_source_id
+FROM gaiadr3.sdssdr13_best_neighbour
+WHERE original_ext_source_id IN {sdss_ids}
+"""
+
+job = Gaia.launch_job(query)
+
+table = job.get_results()
+print(table)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+     source_id      original_ext_source_id
+------------------- ----------------------
+3267563053818481280    1237645879578460255
+3267562985098956544    1237645879578460271
+3262676721065431168    1237645941291614227
+</pre>
+
+<p>Note that there is one SDSS object which is missing in the results. It means that non of the Gaia objects have this object as their best neighbour. </p>
+
+<p>As another example, let's retrieve all Gaia objects in a sky region that have best neighbours is the SDSS DR13 catalogue. We want to get their identifiers in Gaia and SDSS as well as their coordinates.</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+
+ra = 51.98579104558599
+dec = 0.2049317236834345
+r = 1/60
+
+query = f"""
+SELECT gaia.source_id, gaia.ra, gaia.dec, sdss.original_ext_source_id
+FROM gaiadr3.gaia_source_lite AS gaia
+JOIN gaiadr3.sdssdr13_best_neighbour AS sdss
+USING (source_id)
+WHERE CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra}, {dec}, {r})) = 1
+"""
+
+job = Gaia.launch_job_async(query)
+
+table = job.get_results()
+print(table)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Query finished. [astroquery.utils.tap.core]
+     source_id              ra         ... original_ext_source_id
+                           deg         ...                       
+------------------- ------------------ ... ----------------------
+3264413738983247872  51.98701048429981 ...    1237663238739788062
+3264413807702862976 51.972930798005976 ...    1237663238739788022
+3264413811997927808  51.98579104558599 ...    1237663238739788349
+3264413811998323072  51.98564967615249 ...    1237663238739788349
+3264414048220895616   51.9743426015756 ...    1237666301093216356
+</pre>
+
+<p>Look at the third and fourth lines of the table. They are two different sources in Gaia DR3 catalogue, but a single source in SDSS 13. This can happen because of the higher angular resolution of Gaia compared to some external catalogues, such as SDSS. In this case, what has been detected by SDSS has a single object, is actually resolved by Gaia as two different objects. Note that the size of Gaia DR3 is much larger than SDSS 13.</p>
+
+
+<h3>Geometric cross math</h3>
+
+<p>For cross-matching some external catalogues that have not pre-computed tables in Gaia Archive, we should use geometric cross-math. This means that we match objects from two catalogues based on their angular distance. For example, we may decide that if the coordinates of the two objects from the two catalogues have an angular distance less than 1 arcsecond, they are potentially the same object.</p>
+
+<p>Let's show this with a simple example. We need an external catalogue to combine with Gaia. In the script below we retrieve all SDSS objects in a sky region with radius of 2 arcminutes then we save the results in a file on disk and we name it <code>'sdss_region.fits'</code>. Later we will see how to download from SDSS, but for now, this is just a simple cone search. We just keep three columns from the resulting table.</p>
+
+<pre><code class="language-python">import astropy.units as u
+from astropy.coordinates import SkyCoord
+from astropy.table import Table
+from astroquery.sdss import SDSS
+
+c = SkyCoord(ra=179.689, dec=-0.454, unit='deg')
+s_table = SDSS.query_region(c, radius=2*u.arcmin)
+s_table = Table(s_table[['objid', 'ra', 'dec']], dtype=[str, float, float])
+s_table.pprint(max_lines=5)
+s_table.write('sdss_region.fits')
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+       objid               ra               dec        
+------------------- ---------------- ------------------
+1237648673430241637 179.660826921241 -0.438798719987685
+1237648673430307166 179.660834524772 -0.438781406948528
+                ...              ...                ...
+1237648673430307830 179.703536161184 -0.466824299581746
+1237648720693756872   179.7034585865 -0.466791665982252
+Length = 226 rows
+</pre>
+
+<p>You can see that in our specofoed region, there are 226 SDSS objects. Now, we read this table from the disk and upload it to Gaia Archive server using the <code>launch_job_async</code> function along with the cross-match query. In the query we want to join our SDSS table with Gaia, but there is no common column in these two tables So, instead of joining based on common columns, we should do JOIN ON DISTANCE. Note that DISTANCE is an ADQL function. It accepts as its arguments the coordinates of two points. This function returns the angular distance of two points in degrees. The condition of the cross-match that we have chosen is so that if the distance between the objects of the two tables is less than 0.00028 degrees, i.e. 1 arcsecond, then select those objects as matchin objects.</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+from astropy.table import Table
+
+s_table = Table.read('sdss_region.fits')
+
+query= """
+SELECT sdss.objid, gaia.source_id, gaia.ra, gaia.dec
+FROM tap_upload.my_sdss AS sdss
+JOIN gaiadr3.gaia_source_lite AS gaia
+ON DISTANCE(sdss.ra, sdss.dec, gaia.ra, gaia.dec) < 0.00028
+"""
+
+job = Gaia.launch_job_async(
+    query=query,
+    upload_resource=s_table,
+    upload_table_name="my_sdss"
+    )
+
+table = job.get_results()
+table.pprint(max_lines=5)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Query finished. [astroquery.utils.tap.core]
+       objid             source_id              ra                 dec         
+                                               deg                 deg         
+------------------- ------------------- ------------------ --------------------
+1237648673430307040 3602839432284314240 179.69816635303997   -0.438148509372875
+                ...                 ...                ...                  ...
+1237648720693756132 3602839019966412672 179.69923564309107 -0.47832966979674807
+1237648720693756131 3602839019966412672 179.69923564309107 -0.47832966979674807
+Length = 67 rows
+</pre>
+
+<p>The results show that there have been 67 potential matching objects. Note that the last row and the row above it are two different SDSS objects, but one single object in Gaia. This is why you should consider the results as <em>potentially</em> matching objects and further analysis may be nessesary.</p>
+
+<p>The minimum angular distance that we have chosen for the join condition is one arcsecond. You may think that if we decrease this number, we would get more precise results. That's true, but, there's still something you can consider if you want really precise results. The reference epoch of these two catalogues are not the same. The reference epoch of SDSS is J2000, while, that of Gaia DR3 is J2016. There is a very little difference between these two epochs, but if you consider that, you increase the precision.</p>
+
+<p>To take into account the difference of epoch, we should convert coordinates of one of the tables to the epoch of the other table. The ADQL running on Gaia Archive server has a useful function that does this task: <code>EPOCH_PROP_POS</code>. This function accepts coordinates, parallax, proper motion, radial velocity, initial epoch and final epoch as its arguments and returns the propagated position in in radians in the final epoch. The signature of this function is as follow:</p>
+
+<code>
+EPOCH_PROP_POS(ra, dec, plx, pmra, pmdec, rv, T0, T1)
+</code>
+
+<p>Where, arguments and their units are as follow:</p>
+
+<pre><code class="language">ra    : Right Ascension (deg)
+dec   : Declination (deg)
+plx   : Parallax (mas)
+pmra  : Proper Motion in Right Ascension (mas/yr)
+pmdec : Proper Motion in Declination (mas/yr)
+rv    : Radial Velocity (km/s)
+T0    : Reference Julian Epoch (yr)
+T1    : Final Julian Epoch (yr)
+</code></pre>
+
+<p>The returned value of <code>EPOCH_PROP_POS</code> function is a string representation of the coordinates. We can extract RA and DEC from this string using two ADQL functions: <code>COORD1</code> and <code>COORD2</code>. So, the ADQL that we used in the last example should change to this:</p>
+
+<pre><code class="language-sql">SELECT sdss.objid, gaia.source_id, gaia.ra, gaia.dec
+FROM tap_upload.my_sdss AS sdss
+JOIN gaiadr3.gaia_source_lite AS gaia
+ON
+DISTANCE(
+    sdss.ra,
+    sdss.dec,
+    COORD1(EPOCH_PROP_POS(gaia.ra, gaia.dec, gaia.parallax, gaia.pmra, gaia.pmdec, gaia.radial_velocity, 2016, 2000)),
+    COORD2(EPOCH_PROP_POS(gaia.ra, gaia.dec, gaia.parallax, gaia.pmra, gaia.pmdec, gaia.radial_velocity, 2016, 2000))
+) < 0.00028
+</code></pre>
+
+<p>I don't recommend running sending this query to the Gaia server, because it takes a lot of time to be executed. If fact, the <code>EPOCH_PROP_POS</code> function should be run on every single row in Gaia main table and it is a time consuming function. A tricky solution is to limit the number of the rows on which this function should be run. In our example, all the objects are located in a sky region limited by raduis of 2 arcmintes. So, instead of joining our SDSS table to the whole Gaia main table, we can first extract all of the Gaia objects in that region and then join our SDSS table with this limited table. We extract this limited table in a subquery. To make sure that we don't miss any Gaia object due to the epoch propagated, we choose the region radius a little larger than 2 arcminutes. I choosed 2.5 arcminutes.</p>
+
+<pre><code class="language-python">from astropy.table import Table
+from astroquery.gaia import Gaia
+
+s_table = Table.read('sdss_region.fits')
+
+ra = 179.689
+dec = -0.454
+r = 2.5 * (1/60)
+
+query= f"""
+SELECT sdss.objid, subq.source_id, subq.ra, subq.dec
+FROM tap_upload.my_sdss AS sdss
+JOIN ( SELECT source_id, ra, dec, parallax, pmra, pmdec, radial_velocity
+       FROM gaiadr3.gaia_source_lite
+       WHERE CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', {ra}, {dec}, {r})) = 1
+     ) AS subq ON
+DISTANCE(
+    sdss.ra,
+    sdss.dec,
+    COORD1(EPOCH_PROP_POS(subq.ra, subq.dec, subq.parallax, subq.pmra, subq.pmdec, subq.radial_velocity, 2016, 2000)),
+    COORD2(EPOCH_PROP_POS(subq.ra, subq.dec, subq.parallax, subq.pmra, subq.pmdec, subq.radial_velocity, 2016, 2000))
+) < 0.00001
+"""
+
+job = Gaia.launch_job_async(
+    query=query,
+    upload_resource=s_table,
+    upload_table_name="my_sdss"
+    )
+
+table = job.get_results()
+table.pprint(max_lines=5)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+INFO: Query finished. [astroquery.utils.tap.core]
+       objid             source_id              ra                 dec         
+                                               deg                 deg         
+------------------- ------------------- ------------------ --------------------
+1237648673430242021 3602837817375577344 179.66201949929257  -0.4612727925902865
+                ...                 ...                ...                  ...
+1237648720693755946 3602839161701555200 179.71813996242403 -0.45680167096160024
+1237648720693756306 3602839226124852992 179.70292782088086 -0.45378645055726724
+Length = 10 rows
+</pre>
+
+<p>Note that this time we cjanged the join condition from 0.00028 degrees minimum angular distance to 0.00001 degrees. The numbre of matching objects decreaed from 67 to 10. These results are more reliable because we applied higher precision.<p>
+
+<h2>Download ancillary data with DataLink</h2>
+
+<p>For some of the objects, the Gaia survey provides some additional non-tabular information that are presented in separate files. These are known as <em>ancillary</em> data. These additional data are epoch photometry, spectra and probability distributions for some parameters. The ancillary data can not be retrieved by TAP queries explaned above. 
+To download these types of data, you have to use a special data access protocol, called <em>DataLink</em>.</p>
+
+<pre><code class="language">EPOCH_PHOTOMETRY : Light curve of object in G, BP, and RP bands
+XP_CONTINUOUS    : Mean BP/RP spectra based on the continuous representation
+XP_SAMPLED       : Mean BP/RP externally-calibrated and sampled spectra
+RVS              : Mean RVS normalised and sampled spectra
+MCMC_GSPPHOT     : MCMC samples for posterior probability distribution of all parameters derived from GSP-Phot
+MCMC_MSC         : MCMC samples for posterior probability distribution of all parameters derived from MSC
+</code></pre>
+
+<p>The acronyms used above are as follows: MCMC for <em>Monte-Carlo Markov Chain</em>, GSP-Phot for <em>General Stellar Parametrizer from Photometry</em>, and MSC for <em>Multiple Star Classifier</em>. We don't explain all of them, we'll just talk about the first three ones.</p>
+
+<p>Note that not every single Gaia object has ancillary data. To check if an object has each of these types of data you should use the main Gaia table: <code>gaia_source</code> or <code>gaia_source_lite</code>. In these tables, there are columns with <code>has_</code> prefix that is of boolean type and indicates if the object contains each of the above-mentioned ancillary data. For example, if the value of the column <code>has_xp_continuous</code> is <em>true</em>. Let's get some objects which have all of the first three ancillary typed mentioned above:</p>
+
+<pre><code class="language-python">from astroquery.gaia import Gaia
+
+query= """
+select TOP 5 source_id
+FROM gaiadr3.gaia_source_lite
+where has_epoch_photometry = 't'
+AND has_xp_sampled = 't'
+AND has_rvs = 't'
+"""
+
+job = Gaia.launch_job(query)
+
+table = job.get_results()
+table.pprint()
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+     source_id     
+-------------------
+4251837548057346048
+4251838437014014976
+4251838681929094912
+4251839403483831680
+4251839987599423744
+</pre>
+
+<p>Now, let's download all available ancillary data for the third Gaia object in the above results. We should use the <code>load_data</code> function to retrieve these types of data by passing the source indentifier of one or multiple objects. If you want to get data for a single object, you can simply pass its indentifier, but if you want to get data for multiple objects, you should pass them as a list. The function <code>load_data</code> returns a python dictionary.</p>
+
+<pre><code class="language-python">>>> from astroquery.gaia import Gaia
+>>> source_id = 4251838681929094912
+>>> dc = Gaia.load_data(source_id)
+>>> for k in dc.keys():
+	print(k)
+
+	
+EPOCH_PHOTOMETRY-Gaia DR3 4251838681929094912.xml
+MCMC_MSC-Gaia DR3 4251838681929094912.xml
+RVS-Gaia DR3 4251838681929094912.xml
+XP_CONTINUOUS-Gaia DR3 4251838681929094912.xml
+XP_SAMPLED-Gaia DR3 4251838681929094912.xml
+</code></pre>
+
+<p>You can see in keys of the dictionary what ancillary data have been downloaded. Lets see the light curves. The epoch photometry is probided for Green, Red and Blue bands. We extract them all and have a look at the light curve for the Green band:</p>
+
+<pre><code class="language-python">>>> ep_rgb = dc[f'EPOCH_PHOTOMETRY-Gaia DR3 {source_id}.xml'][0].to_table()
+>>> ep_g = ep_rgb[ep_rgb['band']=='G']
+>>> ep_r = ep_rgb[ep_rgb['band']=='RP']
+>>> ep_b = ep_rgb[ep_rgb['band']=='BP']
+>>> ep_g.pprint(max_lines=10)
+     source_id          transit_id    band ... other_flags    solution_id    
+                                           ...                               
+------------------- ----------------- ---- ... ----------- ------------------
+4251838681929094912 17853893478060357    G ...        4097 375316653866487564
+4251838681929094912 19745456239997675    G ...        4099 375316653866487564
+                ...               ...  ... ...         ...                ...
+4251838681929094912 70041479368700547    G ...        4097 375316653866487564
+4251838681929094912 70045571680757462    G ...       12289 375316653866487564
+4251838681929094912 71133664494240469    G ...     4198401 375316653866487564
+Length = 28 rows
+</code></pre>
+
+<p>The most important columns of this table are <code>time</code>, <code>mag</code> and <code>flux</code>. The are also some columns that report errors. The time columns in expressed in Gaia-centric epoch and the scale is TCB. To convert it to Julian Date (TCB) you should add 2455197.5 days to it. Let's convert it to UTC and then to python <code>datetime</code> object:<p>
+
+<pre><code class="language-python">>>> from astropy.time import Time
+>>> jd = ep_g['time'] + 2455197.5
+>>> time = Time(jd, format='jd', scale='tcb').utc.to_datetime()
+</code></pre>
+
+<p>We can now plot the light curve:</p>
+
+<pre><code class="language-python">>>> import matplotlib.pyplot as plt
+>>> plt.plot(time, ep_g['mag'], marker='o')
+[&lt;matplotlib.lines.Line2D object at 0x00000244CA128F70&gt;]
+>>> plt.grid()
+>>> plt.show()
+</code></pre>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/gaia_epoch_phot.png" alt="Light curve of Gaia object">
+
+<p>The XP_SAMPLED is another ancillary data. It is an externally-calibrated and sampled spectrum. The sampling method is so that all of the spectra have the same wavelength positions, from 336 nm to 1020 nm,  with a step of 2 nm. So, there are 343 values in each spectrum.</p>
+
+<pre><code class="language-python">>>> xs = dc[f'XP_SAMPLED-Gaia DR3 {source_id}.xml'][0].to_table()
+>>> xs.pprint(max_lines=10)
+wavelength      flux       flux_error 
+    nm      W / (m2 nm)   W / (m2 nm) 
+---------- ------------- -------------
+     336.0 1.7492875e-17 1.8233299e-17
+     338.0 5.7278903e-18 1.3135403e-17
+       ...           ...           ...
+    1016.0 1.4388574e-14 1.9814582e-15
+    1018.0 1.4483491e-14 2.0694792e-15
+    1020.0  1.493646e-14  2.232749e-15
+Length = 343 rows
+</code></pre>
+
+<p>Let's plot the spectrum and have a quick look at it:</p>
+
+<pre><code class="language-python">>>> plt.plot(xs['wavelength'], xs['flux'])
+[&lt;matplotlib.lines.Line2D object at 0x00000289F24D48B0&gt;]
+>>> plt.grid()
+>>> plt.show()
+</code></pre>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/gaia_wp_flux.png" alt="Light curve of Gaia object">
+
+<p>The RVS is the mean normalised and sampled spectra in the rest frame. The wavelength is from 846 nm to 870 nm in steps of 0.01 nm. So, there are 2401 rows in the table. Both RVS and XP_SAMPLED are spectra of the object. The main difference is that RVS has narrower wavelength range but higher resolution. Let's print the RVS table:</p>
+
+<pre><code class="language-python">>>> rvs = dc[f'RVS-Gaia DR3 {source_id}.xml'][0].to_table()
+>>> rvs.pprint(max_lines=10)
+wavelength    flux     flux_error
+    nm                           
+---------- ---------- -----------
+     846.0 0.48980945 0.013395301
+    846.01 0.49676284  0.00860528
+       ...        ...         ...
+    869.98  1.2239406 0.028176948
+    869.99   1.206881 0.018515952
+     870.0  1.1600646  0.01028767
+Length = 2401 rows
+</code></pre>
+
+<p>You saw that we can use <code>load_data</code> function to retrieve ancillary data. In fact, you can download data for multiple objects at the same time with this function by passing their identifiers as a list to the <code>ids</code> argument. You can also indicate which type of ancillary data you want to be downloaded using the <code>retrieval_type </code> argument. If you don't provide this argument, or if you give it the string <code>ALL</code>, all available ancillary data will be downloaded. If you are only interesed in a certain type, pass it as a string to this argument as shown in the example below. Let's say we want just <code>EPOCH_PHOTOMETRY</code> of the objects.</p>
+
+
+<pre><code class="language-python">>>> dc = Gaia.load_data(
+	ids=[4251837548057346048, 4251838437014014976, 4251838681929094912],
+	retrieval_type='EPOCH_PHOTOMETRY'
+	)
+>>> for k in dc.keys():
+	print(k)
+
+	
+EPOCH_PHOTOMETRY-Gaia DR3 4251837548057346048.xml
+EPOCH_PHOTOMETRY-Gaia DR3 4251838437014014976.xml
+EPOCH_PHOTOMETRY-Gaia DR3 4251838681929094912.xml
+</code></pre>
+
+</body>
+</html>

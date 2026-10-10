@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>VizieR</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>VizieR</h1>
+
+<p>Another really useful service created by CDS, is the <em>VizieR Catalogue Service</em>.
+If you already know which catalog you want to use, this is the best place to retrieve data from that catalog.</p>
+
+<h2>Find catalogue and retrieve data with astroquery</h2>
+
+If you don't know which catalog to use, you can easily search the VizieR website to find which catalog is best for your job. If you prefer search for catalogs programatically, you can use <code>.find_catalogs()</code> method of the <code>Vizier</code> class. You pass the keyword(s) you are searching for to the method. The method wil return an <code>OrderedDict</code> object.</p>
+
+<pre><code class="language-python">>>> from astroquery.vizier import Vizier
+>>> viz = Vizier.find_catalogs('SDSS')
+>>> for k, v in viz.items():
+	print(k, ':', v.description)
+
+	
+II/294 : The SDSS Photometric Catalog, Release 7 (Adelman-McCarthy+, 2009)
+V/139 : The SDSS Photometric Catalog, Release 9 (Adelman-McCarthy+, 2012)
+V/147 : The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)
+V/154 : Sloan Digital Sky Surveys (SDSS), Release 16 (DR16) (Ahumada+, 2020)
+VII/289 : SDSS quasar catalog, sixteenth data release (DR16Q) (Lyke+, 2020)
+</code></pre>
+
+<p>At the left side of the above results, you can see the catalogue names, and at the right side you see a description for each catalogue. You should use these names to retrieve data from a catalogue.</p>
+
+
+<p>You can search objects by identifier or by coordinates the same way we did for SIMBAD. Let's search for the star <em>Vy Canis Major</em>:
+
+<pre><code class="language-python">
+>>> res = Vizier.query_object("Vy Canis Major")
+>>> type(res)
+<class 'astroquery.utils.commons.TableList'>
+>>> len(res)
+296
+</code></pre>
+
+<p>The return result is a <code>TableList</code> object and in this case it contains 296 tables.
+
+<pre><code class="language-python">
+>>> print(res)
+TableList with 296 tables:
+	'0:METAobj' with 5 column(s) and 5 row(s) 
+	'1:ReadMeObj' with 5 column(s) and 5 row(s) 
+	'2:I/62C/catalog' with 13 column(s) and 1 row(s) 
+	'3:I/100A/w50' with 9 column(s) and 1 row(s) 
+	'4:I/108/cpd' with 8 column(s) and 1 row(s) 
+...
+</code></pre>
+
+<p>We can use the index or name of the catalogue to get information of the object(s) in that catalogue. Let's try the fifth catalogue:</p> 
+
+<pre><code class="language-python">
+>>> print(res['I/108/cpd'])
+zone num  suppl mag    RA1875      DE1875    _RA.icrs    _DE.icrs 
+deg             mag                                               
+---- ---- ----- ---- ---------- ----------- ---------- -----------
+ -25 2286        8.8 07 17 49.9 -25 31 36.0 07 22 58.7 -25 45 57.3
+</code></pre>
+
+<p>When you already know the name of the catalogue and you want to search an object in it, you can specify the <code>catalog</code> argument of the <code>query_object</code> function. You can also use this argument when searching in a region with the <code>query_region</code> function. In the following example we search in a very narrow region of the sky in the SDSS DR16 catalogue. As we saw above, the table name of this catalogue in Vizier is <em>V/154</em>. Since we are searching in a single catalogue, the result has only one table.</p>
+
+<pre><code class="language-python">from astroquery.vizier import Vizier
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+
+c = SkyCoord(ra=179.68929, dec=-0.45438, unit='deg')
+res = Vizier.query_region(c, radius=5*u.arcsec, catalog='V/154')
+print('Number of tables:', len(res))
+print(res[0])
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+Number of tables: 1
+       objID         RA_ICRS    DE_ICRS   ...     Sp-ID      _tab1_130 
+                       deg        deg     ...                    d     
+------------------- ---------- ---------- ... -------------- ----------
+1237648673430307023 179.689313  -0.454394 ...                51257.3009
+1237648673430307024 179.689313  -0.454394 ...                51257.3009
+1237648720693755915 179.689304  -0.454381 ...                51259.2955
+1237648720693755918 179.689293  -0.454379 ... 285-51930-0184 51259.2955
+</pre>
+
+<p>Not all columns in the catalogue will be returned. If you want to specify exactly which columns should be returned, you should do the query in another way. You should create an instance of the <code>Vizier</code> class and specify the columns names. In this way, you have also the ability to filter columns based on certain condition. As an example, we want to search a sky region the SDSS DR16 catalogue, but we need the objects that have redshifts. We want just certain columns to be returned: the identifier, magnitudes in <em>g</em>, <em>r</em> and <em>i</em> bands and the redshift. Note that we have applied the filter via the <code>column_filters</code> argument.</p>
+
+<pre><code class="language-python">from astroquery.vizier import Vizier
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+
+viz = Vizier(columns=['objID', 'gmag', 'rmag', 'imag', 'zsp'],
+             column_filters={"zsp":"NOT NULL"})
+
+c = SkyCoord(ra=179.68929, dec=-0.45438, unit='deg')
+
+tables = viz.query_region(c, radius=5*u.arcmin, catalog='V/154')
+
+print(tables[0])
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+       objID         gmag   rmag   imag    zsp   
+                     mag    mag    mag           
+------------------- ------ ------ ------ --------
+1237648720693756163 17.762 16.589 16.080  0.12509
+1237648720693690639 20.015 18.681 18.118  0.00018
+1237648720693690487 16.880 16.582 16.479  0.00060
+1237648720693690602 18.415 17.565 17.184  0.08381
+1237648720693755918 17.603 16.827 16.438  0.09484
+1237674649928532213 18.493 17.737 17.419  0.00019
+</pre>
+
+<h2>Tap Queries</h2>
+
+<p>For more advanced queries it is recommended to use tap queries. The <code>astroquery.visier</code> has not provided yet a tap query function. We can use our own function <code>sql2df</code>. Let's do the search region that we did earlier  with astroquery:</p>
+
+
+
+<pre><code class="language-python">from astrobook import sql2df
+
+ra = 179.68929
+dec = -0.45438
+r = 0.083 # radius in degrees
+
+query = f"""
+SELECT objID, gmag, rmag, imag, zsp
+FROM "V/154/sdss16"
+WHERE zsp IS NOT NULL
+AND
+CONTAINS(POINT('ICRS', ra_icrs, de_icrs), CIRCLE('ICRS', {ra}, {dec}, {r})) = 1
+"""
+
+df = sql2df(query, api='vizier')
+print(df)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+                 objID    gmag    rmag    imag      zsp
+0  1237648720693756163  17.762  16.589  16.080  0.12509
+1  1237648720693690639  20.015  18.681  18.118  0.00018
+2  1237648720693690602  18.415  17.565  17.184  0.08381
+3  1237648720693690487  16.880  16.582  16.479  0.00060
+4  1237648720693755918  17.603  16.827  16.438  0.09484
+5  1237674649928532213  18.493  17.737  17.419  0.00019
+</pre>
+
+<p>Note that here we entered the radius in degrees. We also used the complete name of the table <code>"V/154/sdss16"</code> in quotation marks.</p>
+
+<p>To retrieve table names and description of VisieR with tap query, you can simply use the following code:</p>
+
+<pre><code class="language-python">>>> df = sql2df('SELECT table_name, description FROM TAP_SCHEMA.tables', api='vizier')</code></pre>
+
+<p>To get columns of a specific table:</p>
+
+<pre><code class="language-python">>>> query = """
+SELECT column_name, description
+FROM TAP_SCHEMA.columns
+WHERE table_name='V/154/sdss16'
+"""
+>>> df = sql2df(query, api='vizier')
+</code></pre>
+
+<p>There are also other things VizieR can do, such as <a href="http://cdsarc.u-strasbg.fr/assocdata/" target="_blank" rel="nofollow noopener">search for spectra and images</a>. You can use this feature on the VizieR website.</p>
+
+</body>
+</html>

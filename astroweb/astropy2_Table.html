@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Astropy Tables</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Astropy Tables</h1>
+
+<p>If you are familiar with <a href="https://pandas.pydata.org/" target="_blank" rel="nofollow noopener">pandas</a>, you will learn astropy tables very quickly. Astropy <em>Table</em> is like pandas <em>DataFrame</em>, but with a big difference: it stores not only values, but also units. In other words, it is a data structure that stores quantities. Let's show this with an example.</p>
+
+<p>Suppose that we want to create a table that stores mass and radius of three bodies: Sun, Earth and Moon. We can use pandas as follows:</p>
+
+<pre><code class="language-python">import pandas as pd
+
+bodies = ['sun', 'earth', 'moon']
+mass = [1.989e30, 5.972e24, 7.348e22]
+radius = [696340, 6371, 1737]
+
+df = pd.DataFrame({'B': bodies, 'M': mass, 'R': radius})
+</code></pre>
+
+<p>Let's see the contents of <code>df</code> and its data types:</p>
+
+<pre><code class="language-python">>>> df
+       B             M       R
+0    sun  1.989000e+30  696340
+1  earth  5.972000e+24    6371
+2   moon  7.348000e+22    1737
+>>> 
+>>> df.dtypes
+B     object
+M    float64
+R      int64
+dtype: object
+</code></pre>
+
+<p>As you see, it is not clear what is the unit of mass and radius in the table. A better approach, is to use astropy <code>Table</code>. This time, we pass the lists as quantities, not just values. Then we create the table using <code>QTable</code> class.</p>
+
+<pre><code class="language-python">from astropy.table import QTable
+import astropy.units as u
+
+bodies = ['sun', 'earth', 'moon']
+mass = [1.989e30, 5.972e24, 7.348e22] * u.kg
+radius = [696340, 6371, 1737] * u.km
+
+t = QTable(data=[bodies, mass, radius],
+           names=['B', 'M', 'R'])
+
+print(t)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+  B       M        R    
+          kg       km   
+----- --------- --------
+  sun 1.989e+30 696340.0
+earth 5.972e+24   6371.0
+ moon 7.348e+22   1737.0
+</pre>
+
+<p>You can see that this time, each column has its own unit. Similar to <em>pandas</em>, so can access each column as follows:</p>
+
+<pre><code class="language-python">>>> print(t['M'])
+[1.989e+30 5.972e+24 7.348e+22] kg
+>>>
+>>> print(t['R'])
+[696340.   6371.   1737.] km
+</code></pre>
+
+<p>This time, you get a list of quantities. It is possible to get each element in the list by giving its index:</p>
+
+<pre><code class="language-python">>>> print('Mass of the Sun is', t['M'][0])
+Mass of the Sun is 1.989e+30 kg
+</code></pre>
+
+<p>For astropy, internally, each column is a <code>Quantity</code> object. So, you can use all of the methods and attributes of the <code>Quantity</code> class for a column, such as <code>.unit</code> and <code>.value</code> attributes. For example, if we want only the values of a column, we should use the <code>.value</code> attribute, which gives us a numpy array.</p>
+
+<pre><code class="language-python">>>> t['M'].unit
+Unit("kg")
+>>> t['M'].value
+array([1.989e+30, 5.972e+24, 7.348e+22])
+>>> type(t['M'].value)
+&lt;class 'numpy.ndarray'&gt;
+</code></pre>
+
+<p>To add a new row to the table, we can use <code>.add_row()</code> method:</p>
+
+<pre><code class="language-python">>>> ven = ['venus', 4.867e24 * u.kg, 6052 * u.km]
+>>> t.add_row(ven)
+>>> print(t)
+  B       M        R    
+          kg       km   
+----- --------- --------
+  sun 1.989e+30 696340.0
+earth 5.972e+24   6371.0
+ moon 7.348e+22   1737.0
+venus 4.867e+24   6052.0
+</code></pre>
+
+<p>Another advantage of using astropy <code>Table</code> is that you can create new columns based on calculations on other columns, and the new column will be a <code>Quantity</code> with proper unit and value. As an example, we will calculate the <em>Escape Velocity</em> at the surface of each of the three bodies in our table. The formula is as follows:</p>
+
+\[ V_{e} = \sqrt{ \frac{2 G M}{R} }\]
+
+<p>We will create a new column, <code>Ve</code> in our table:</p>
+
+<pre><code class="language-python">>>> from astropy.constants import G
+>>> t['Ve'] = ( (2*G*t['M']) / t['R'] ) ** 0.5
+>>> print(t)
+  B       M        R              Ve         
+          kg       km    m(3/2) / (km(1/2) s)
+----- --------- -------- --------------------
+  sun 1.989e+30 696340.0   19526507.818044215
+earth 5.972e+24   6371.0    353731.6799453435
+ moon 7.348e+22   1737.0    75145.42140469143
+venus 4.867e+24   6052.0    327641.6264155266
+</code></pre>
+
+<p>Well, we expected the unit of <em>Escape Velocity</em> to be <code>m/s</code>, but here we got <code>m(3/2) / (km(1/2) s)</code>. We can use a useful method of the <code>Quantity</code> class that decomposes the unit into its irreducible parts. As the name suggests, this methos is <code>.decompose()</code>:</p>
+
+<pre><code class="language-python">>>> t['Ve'] = t['Ve'].decompose()
+>>> print(t)
+  B       M        R             Ve        
+          kg       km          m / s       
+----- --------- -------- ------------------
+  sun 1.989e+30 696340.0  617482.3945410443
+earth 5.972e+24   6371.0 11185.977891849909
+ moon 7.348e+22   1737.0 2376.3068737199446
+venus 4.867e+24   6052.0 10360.937957550537
+</code></pre>
+
+<p>Now, the unit of <em>Escape Velocity</em> is in <code>m/s</code>.</p>
+
+<p>For saving the table to the disk, you can use the <code>.write()</code> method. Let's save our table as a <em>FITS</em> file. <em>FITS</em> is a very common and useful file type in astronomy. We will talk about it later.</p>
+
+<pre><code class="language-python">>>> t.write('bodies.fits')
+</code></pre>
+
+<p>Use the <code>.read()</code> method of <code>QTable</code> or <code>Table</code> classes as follow to open the saved file:</p>
+
+<pre><code class="language-python">from astropy.table import Table
+t = Table.read('bodies.fits')
+</code></pre>
+
+</body>
+</html>

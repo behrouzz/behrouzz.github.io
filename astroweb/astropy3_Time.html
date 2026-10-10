@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Astropy Time</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Astropy Time</h1>
+
+<p>Python comes with the standard module <code>datetime</code> which is very useful for dealing with date and time. There are two reasons that this module is not very suitable in astronomical calculations. First, <code>datetime</code> is just based on the civil calender. It stores and measures the time using year, month, day, hours, minutes, etc. In astronomy we use different time formats, such as <em>Julian Date</em>, <em>Epoch</em>, etc. Second, in astronomy, we use different <em>Time Scales</em> which make calculations much more complicated. This is why astropy introduces the <code>time</code> which has a very useful class <code>Time</code>.</p>
+
+<p>To create a time object in astropy, you should create an instance of the <code>Time</code> class by passing:
+<ul>
+  <li>the time value in one of the supported formats (as string, float or <code>datetime</code>)</li>
+  <li>the time format (datetime, 'iso', 'isot', 'jd', etc.)</li>
+  <li>the time scale ('utc', 'ut1', 'tt', 'tdb', etc.)</li>
+</ul></p>
+
+<p>The time value can be a single value or an array of values. Usually, astropy can infer the format from the value you entered. So, the <code>format</code> argument is optional. The <code>scale</code> argument is also optional; it defaluts to <code>'utc'</code>.</p>
+
+<h2>Time Format</h2>
+
+<p>Let's create a time object and check its value, format and scale.</p>
+
+<pre><code class="language-python">>>> from astropy.time import Time
+>>> t = Time('2021-03-20 09:37:11')
+>>> t
+&lt;Time object: scale='utc' format='iso' value=2021-03-20 09:37:11.000&gt;
+</code></pre>
+
+<p>Here, I entered the time value as a string in ISO format (<code>YYYY-MM-DD hh:mm:ss</code>) and astropy correctly infered the format as <code>'iso'</code>. Since I did not determine the scale, astropy chosed the <code>'utc'</code> scale.</p>
+
+<p>We can enter the time value as python <code>datetime</code>. Let's see what is the difference between two time objects one with the ISO format and another with datetime format:</p>
+
+<pre><code class="language-python">>>> from datetime import datetime
+>>> t1 = Time('2021-03-20 09:37:11')
+>>> t2 = Time(datetime(2021, 3, 20, 9, 37, 11))
+>>> t1
+&lt;Time object: scale='utc' format='iso' value=2021-03-20 09:37:11.000&gt;
+>>> t2
+&lt;Time object: scale='utc' format='datetime' value=2021-03-20 09:37:11&gt;
+</code></pre>
+
+<p>Since e did not enter the scale, both are <code>'utc'</code>. The formats are different, but the values are the same. They point to the same ponit in time but with different formats. If we convert them to <em>Julian Date</em> using <code>.jd</code> attribute we will see that they have exactly the same value:</p>
+
+<pre><code class="language-python">>>> t1.jd
+2459293.9008217594
+>>> t2.jd
+2459293.9008217594
+</code></pre>
+
+<p>We can also change the format of a time object by modifing its <code>.format</code> attribute:</p>
+
+<pre><code class="language-python">>>> t1.format = 'datetime'
+>>> t1
+&lt;Time object: scale='utc' format='datetime' value=2021-03-20 09:37:11&gt;
+>>> t2
+&lt;Time object: scale='utc' format='datetime' value=2021-03-20 09:37:11&gt;
+</code></pre>
+
+<p>Now, both <code>t1</code> and <code>t2</code> are identical.
+
+<p>It is a good practice to explicitly determine format and scale. We'll talk about scale later. For now, let's create a time object with a numerical value as <em>Julian Date</em>:</p>
+
+<pre><code class="language-python">>>> t = Time(2459293.9008217594, format='jd')
+>>> t
+&lt;Time object: scale='utc' format='jd' value=2459293.9008217594&gt;
+</code></pre>
+
+<p>We can get the ISO version using the <code>.iso</code> attribute, or we can change the format of the time object by modifying the <code>.format</code> attribute:</p>
+
+<pre><code class="language-python">>>> t.iso
+'2021-03-20 09:37:11.000'
+>>> t.format = 'iso'
+>>> t
+&lt;Time object: scale='utc' format='iso' value=2021-03-20 09:37:11.000&gt;
+</code></pre>
+
+<p>You can check all of the supported time formats using <code>Time.FORMATS</code>.</p>
+
+<h2>Time Scale</h2>
+
+<p>To check which time scales are supported by astropy:</p>
+
+<pre><code class="language-python">>>> Time.SCALES
+('tai', 'tcb', 'tcg', 'tdb', 'tt', 'ut1', 'utc', 'local')
+</code></pre>
+
+<p>Let's create a time object with <em>Terrestrial Time (TT)</em> scale and convert it to other time scales:</p>
+
+<pre><code class="language-python">>>> t = Time('2021-03-20 09:38:20.184', scale='tt')
+>>> t.utc
+&lt;Time object: scale='utc' format='iso' value=2021-03-20 09:37:11.000&gt;
+>>> t.ut1
+&lt;Time object: scale='ut1' format='iso' value=2021-03-20 09:37:10.828&gt;
+>>> t.tai
+&lt;Time object: scale='tai' format='iso' value=2021-03-20 09:37:48.000&gt;
+>>> t.tdb
+&lt;Time object: scale='tdb' format='iso' value=2021-03-20 09:38:20.186&gt;
+</code></pre>
+
+<p>The difference between UT1 and UTC is called \(\Delta UT\). It is it is expressed in seconds and we can get it using <code>.delta_ut1_utc</code> attribute. Behind the scene, astropy retrieves this value from the <em>International Earth Rotation and Reference Systems Service (IERS)</em>. Likewise, the difference between TDB and TT is called \(\Delta TR\) and we can get it with <code>.delta_tt</code> attribute.</p>
+
+<pre><code class="language-python">>>> t = Time('2021-03-20 09:38:20.184', scale='tt')
+>>> print(t.delta_ut1_utc)
+-0.17189276191666666
+>>> print(t.delta_tdb_tt)
+0.001618808591149933
+</code></pre>
+
+<p>Let's finish this section with an example. As said before, the value of a time object can be single or an array. Here, we want to measure the length of the calendar years between 2015 and 2024. So, we create a time object by passing the first day of january of each of the years as an array. Then, we substract each year from the year after it. By substracting a time object from another time object, we get a <code>TimeDelta</code> object. By default, the scale is TAI and the format is Julian Date. 
+
+<pre><code class="language-python">import numpy as np
+from datetime import datetime
+from astropy.time import Time
+
+years = np.arange(2015, 2025)
+arr = [datetime(y, 1, 1) for y in years]
+
+t = Time(arr, scale='utc')
+
+dt = t[1:] - t[:-1]
+
+print('Scale :', dt.scale)
+print('Format:', dt.format)
+
+for i,j in zip(years[:-1], dt.value):
+    print(i, ':', j)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+Scale : tai
+Format: jd
+2015 : 365.00001157407405
+2016 : 366.00001157407405
+2017 : 365.0
+2018 : 365.0
+2019 : 365.0
+2020 : 366.0
+2021 : 365.0
+2022 : 365.0
+2023 : 365.0
+</pre>
+
+<p>The years 2016 and 2020 were leap years, so they had 366 days. But what is the number <code>.00001157407405</code> added to the years 2015 and 2016? This is one second expressed in Julain Date format. In fact, it is the result of 1/86400. One leap second has been added to each of the years 2015 and 2016 by the IERS to keep UTC and UT1 close to each other.</p>
+
+
+</body>
+</html>

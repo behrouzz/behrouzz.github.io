@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>SIMBAD</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>SIMBAD</h1>
+
+<p>SIMBAD is an online database, maintained by Centre de données astronomiques de Strasbourg (CDS). As of Jully 2024, it contains information fore more than 18 million deep sky objects. It is especially usefull when you want to do cross catalogue searches. You can access the database in different ways.</p>
+
+<h2>Query by identifier</h2>
+
+<p>If you need information for a certain object, you can type its name or identifier on the SIMBAD website. If you prefere a pythonic way, you can use astroquert package:</p>
+
+<pre><code class="language-python">>>> from astroquery.simbad import Simbad
+>>> table = Simbad.query_object("m31")
+>>> print(table.to_pandas().iloc[0])
+MAIN_ID                           M  31
+RA                         00 42 44.330
+DEC                        +41 16 07.50
+RA_PREC                               7
+DEC_PREC                              7
+COO_ERR_MAJA                        NaN
+COO_ERR_MINA                        NaN
+COO_ERR_ANGLE                         0
+COO_QUAL                              C
+COO_WAVELENGTH                        I
+COO_BIBCODE         2006AJ....131.1163S
+SCRIPT_NUMBER_ID                      1
+Name: 0, dtype: object
+</code></pre>
+
+<p>You can see that the resulting table contains a few columns that give some information about the coordinates. You may need many more information, such as parallax. In this case, you can first create an instance of the <code>Simbad</code> class, then use <code>.add_votable_fields()</code> and pass it your desired columns names.</p>
+
+<pre><code class="language-python">from astroquery.simbad import Simbad
+>>> simbad = Simbad()
+>>> simbad.add_votable_fields('parallax')
+>>> table = Simbad.query_object("m31")
+>>> print(table.to_pandas().iloc[0])
+MAIN_ID                           M  31
+RA                         00 42 44.330
+DEC                        +41 16 07.50
+RA_PREC                               7
+DEC_PREC                              7
+COO_ERR_MAJA                        NaN
+COO_ERR_MINA                        NaN
+COO_ERR_ANGLE                         0
+COO_QUAL                              C
+COO_WAVELENGTH                        I
+COO_BIBCODE         2006AJ....131.1163S
+PLX_VALUE                           6.0
+PLX_PREC                              1
+PLX_ERROR                          14.1
+PLX_QUAL                              E
+PLX_BIBCODE         1995GCTP..C......0V
+SCRIPT_NUMBER_ID                      1
+Name: 0, dtype: object
+</code></pre>
+
+<p>Now, you the table contains the parallax information along with the default columns. To see which options you can add to get back the output columns use <code>.list_votable_fields()</code> method.</p>
+
+<p>If you want to search for multiple objects, instead of <code>query_object</code>, you should use <code>query_objects</code>. Lets get some data of four stars of the Orion constellation:</p>
+
+<pre><code class="language-python">>>> table = Simbad.query_objects(['Betelgeuse', 'Bellatrix', 'Rigel', 'Saiph'])
+>>> print(table)
+ MAIN_ID        RA           DEC      ...     COO_BIBCODE     SCRIPT_NUMBER_ID
+             "h:m:s"       "d:m:s"    ...                                     
+--------- ------------- ------------- ... ------------------- ----------------
+* alf Ori 05 55 10.3053 +07 24 25.430 ... 2007A&A...474..653V                1
+* gam Ori 05 25 07.8632 +06 20 58.931 ... 2007A&A...474..653V                2
+* bet Ori 05 14 32.2721 -08 12 05.898 ... 2007A&A...474..653V                3
+* kap Ori 05 47 45.3888 -09 40 10.577 ... 2007A&A...474..653V                4
+
+</code></pre>
+
+
+<h2>Query by coordinates</h2>
+
+<p>If you are looking for objects at a cetrain location in the sky, you can use the <code>query_region</code> function. You give your desired coordinates and the radius of the region your are searching.</p>
+
+<pre><code class="language-python">from astroquery.simbad import Simbad
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+coord = SkyCoord(ra=10.68470833, dec=41.26875, unit='deg')
+table = Simbad.query_region(coordinates=coord, radius=10*u.arcsec)
+>>> print(table[:5])
+               MAIN_ID                     RA      ... SCRIPT_NUMBER_ID
+                                        "h:m:s"    ...                 
+------------------------------------- ------------ ... ----------------
+                                M  31 00 42 44.330 ...                1
+                        [HPH2013] 167  00 42 44.36 ...                1
+                        [O2006] QSS 8 00 42 44.365 ...                1
+[CHM2007] LDC   31 J004244.33+4116074   00 42 44.3 ...                1
+                            NAME M31*  00 42 44.33 ...                1
+</code></pre>
+
+<p>There's an argument <code>criteria</code> that can be used to filter the results based on some criteria. This an argument that can be used for som other functions, such as <code>query_object</code>, too. This argument accepts ADQL statements as a string. You can refer to astoquery documentations if you like. But I don't recommend using these kinds of options for advanced searches.</p>
+
+<pre><code class="language-python">>>> table = Simbad.query_region(
+	coordinates=coord,
+	radius=10*u.arcsec,
+	criteria="otype = 'Galaxy..'"
+	)
+>>> print(table)
+               main_id                        ra         ...     coo_bibcode    
+                                             deg         ...                    
+------------------------------------- ------------------ ... -------------------
+[CHM2007] LDC   31 J004244.33+4116074  10.68458333333333 ... 2007ApJ...655..790C
+                                M  31 10.684708333333333 ... 2006AJ....131.1163S
+</code></pre>
+
+<p>As with the <code>query_object</code>, you can use <code>.add_votable_fields()</code> to control the output columns.  For simple tasks, they are pretty good and useful, but for a more complicated search, it is better to use Tap queries.</p>
+
+<h2>Tap queries</h2>
+
+<pre><code class="language-python">import pandas as pd
+from requests import request
+from io import StringIO
+
+def sql2df(script, api):
+    script = ' '.join(script.strip().split('\n'))
+    url = api + script.replace(' ', '%20') + '&format=csv'
+    res = request('GET', url).content.decode('utf-8')
+    return pd.read_csv(StringIO(res))
+
+SIMBAD_API = 'https://simbad.u-strasbg.fr/simbad/sim-tap/sync?request=doQuery&lang=adql&query='
+
+df = sql2df('SELECT TOP 10 main_id, ra, dec FROM basic', SIMBAD_API)
+print(df)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+                        main_id         ra        dec
+0       2MASS J04110642+1247481  62.776762  12.796713
+1               LSPM J0333+1509  53.299177  15.158553
+2       2MASS J04031718-0149181  60.821620  -1.821685
+3  Gaia DR3 3206196561094104704  68.505611  -1.191336
+4  Gaia DR3 3228064060664253952  74.616977  -0.446638
+5   Gaia DR2 189080059693778048  79.022236  41.316316
+6   Gaia DR3 258159665143055872  65.829249  48.159151
+7  Gaia DR3 3127106868643145856  99.998679   3.045566
+8  Gaia DR3 3351923667578609536  99.944470  11.722036
+9       2MASS J04474725+0825519  71.946880   8.431090
+</pre>
+
+<p>To see table of the database</p>
+
+<pre><code class="language-python">>>> script = """
+SELECT table_name, description
+FROM TAP_SCHEMA.tables
+"""
+>>> df = sql2df(script, SIMBAD_API)
+>>> print(df)
+                table_name                                        description
+0                    basic          General data about an astronomical object
+1                      ids                   all names concatenated with pipe
+2                 alltypes            all object types concatenated with pipe
+3                    ident              Identifiers of an astronomical object
+4                      cat                                    Catalogues name
+5                     flux  Magnitude/Flux information about an astronomic...
+6                allfluxes   all flux/magnitudes U,B,V,I,J,H,K,u_,g_,r_,i_,z_
+7                   filter                       Description of a flux filter
+8                  has_ref  Associations between astronomical objects and ...
+9                      ref                            Bibliographic reference
+10                  author                Author of a bibliographic reference
+11                  h_link                    hierarchy of membership measure
+12             mesHerschel                         The Herschel observing Log
+13                  biblio                                       Bibliography
+14                keywords                        List of keywords in a paper
+15                  mesXmm                                 XMM observing log.
+16           mesVelocities         Collection of HRV, Vlsr, cz and redshifts.
+17                  mesVar  Collection of stellar variability types and pe...
+18                  mesRot                     Stellar Rotational Velocities.
+19                   mesPM                      Collection of proper motions.
+20                  mesPLX            Collection of trigonometric parallaxes.
+21                otypedef     all names and definitions for the object types
+22                  mesIUE  International Ultraviolet Explorer observing log.
+23                  mesISO    Infrared Space Observatory (ISO) observing log.
+24                 mesFe_h  Collection of metallicity, as well as Teff, lo...
+25             mesDiameter                   Collection of stellar diameters.
+26             mesDistance  Collection of distances (pc, kpc or Mpc) by se...
+27      TAP_SCHEMA.schemas     List of schemas published in this TAP service.
+28       TAP_SCHEMA.tables      List of tables published in this TAP service.
+29      TAP_SCHEMA.columns  List of columns of all tables listed in TAP_SC...
+30         TAP_SCHEMA.keys  List all foreign keys but provides just the ta...
+31  TAP_SCHEMA.key_columns  List all foreign keys but provides just the co...
+32                  otypes  List of all object types associated with an ob...
+33                  mesSpT                      Collection of spectral types.
+34                journals   Description of all used journals in the database
+</code></pre>
+
+<p>To see columns of a table</p>
+
+<pre><code class="language-python">>>> script = """
+SELECT column_name, description
+FROM TAP_SCHEMA.columns
+WHERE table_name='basic'
+"""
+>>> df = sql2df(script, SIMBAD_API)
+>>> print(df)
+            column_name                                 description
+0             otype_txt                                 Object type
+1               main_id               Main identifier for an object
+2                    ra                             Right ascension
+3                   dec                                 Declination
+4              plx_prec                          Parallax precision
+..                  ...                                         ...
+62    rvz_redshift_prec                          redshift precision
+63         rvz_err_prec  Radial velocity / redshift error precision
+64  galdim_majaxis_prec           Angular size major axis precision
+65  galdim_minaxis_prec           Angular size minor axis precision
+66       galdim_bibcode                  Galaxy dimension reference
+
+[67 rows x 2 columns]
+</code></pre>
+
+<pre><code class="language-python">
+</code></pre>
+
+</body>
+</html>

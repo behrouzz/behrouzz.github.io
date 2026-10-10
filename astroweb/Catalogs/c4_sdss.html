@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>SDSS</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>Sloan Digital Sky Survey</h1>
+
+<p>The Sloan Digital Sky Survey (SDSS) is one of the greatest deep-sky surveys ever made. It has been launched by <em>Apache Point Observatory</em> in New Mexico, United States. </p>
+
+<p>Explan here....</p>
+
+<p>The most basic types of data collected by the SDSS are <i>photometric</i> and <i>spectroscopic</i> data. The photometric data have been collected by a special type of <a href="https://airandspace.si.edu/collection-objects/camera-imaging-digital-sloan-digital-sky-survey-ccd-array/nasm_A20130052000" target="_blank" rel="noopener">camera</a> that is equipped with 30 CCDs arranged in six columns and five rows. Each row of the camera uses a different filter, from ultraviolet to infrared. These bands are <em>u</em>, <em>g</em>, <em>r</em>, <em>i</em> and <em>z</em>.</p>
+
+<div style="text-align: center;">
+<img src="https://www.sdss.org/wp-content/uploads/2014/11/faceplat2.jpg" style="padding: 5px 15px 10px 10px;">
+</div>
+
+
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+th {
+  background-color: #96D4D4;
+}
+th, td {
+  padding-left: 15px;
+}
+table.center {
+  margin-left: auto; 
+  margin-right: auto;
+}
+</style>
+</head>
+<body>
+
+<table class="center" style="width:50%">
+  <tr>
+    <th>NAME</th>
+    <td><b>u</b></td> 
+    <td><b>g</b></td>
+    <td><b>r</b></td> 
+    <td><b>i</b></td>
+    <td><b>z</b></td>
+  </tr>
+  <tr>
+    <th>COLOR</th>
+    <td>Ultraviolet</td>
+    <td>Green</td>
+    <td>Red</td>
+    <td>Near-Infrared</td>
+    <td>Infrared</td>
+  </tr>
+
+  <tr>
+    <th>WAVELENGTH</th>
+    <td>3543</td>
+    <td>4770</td>
+    <td>6231</td>
+    <td>7625</td>
+    <td>9134</td>
+  </tr>
+</table>
+
+</body>
+
+<p>The process of scanning the sky occurs with very slow movement of the camera along its columns. Therefore, the CCDs in each column capture the same image but in five different filters.</p>
+
+<h3>SDSS terminology</h3>
+
+<p>A <b>strip</b> is a scan along a line of constant survey latitude. The fraction of a strip observed at one time is a <b>run</b>. A <b>camcol</b> (camera column) is the output of one camera column of CCDs as part of a Run. A <b>field</b> is a part of a camcol that is processed by the <em>Photo pipeline</em> at one time. Fields are 2048 × 1489 pixels; a field consists of the frames in the 5 filters for the same part of the sky. For a brief description see <a href="http://skyserver.sdss.org/dr16/en/tools/getimg/getimghome.aspx" target="_blank" rel="noopener">here</a> and for a more technical description see <a href="https://www.sdss.org/dr18/help/glossary/" target="_blank" rel="noopener">here</a>.</p>
+
+<p>If you have <em>run</em>, <em>camcol</em> and <em>field</em> of an image, you can see it via a tool called <a href="http://skyserver.sdss.org/dr16/en/tools/getimg/fields.aspx" target="_blank" rel="noopener">Get Fields</a>. But we may not always know these parameters.</p>
+
+<p>The SDSS team has assigned a unique ID to each object scanned in the sky called <b>ObjID</b>. If you know already the <em>ObjID</em> of an object, you can find some of the parameters mentioned above by the underlying SDSS ObjID Encoding that has been implemented in <code>decode_objid</code> function of <code>sdss</code> python package. It can be installed as follows:</p>
+
+<pre><code>pip install sdss</code></pre>
+
+For example, we want to find the parameters of an object whose <em>ObjID</em> is 1237648720693755918:</p>
+
+<pre><code class="language-python">import sdss
+dc = sdss.decode_objid(1237648720693755918)
+print(dc)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+{'version': 2,
+ 'rerun': 301,
+ 'run': 756,
+ 'camcol': 2,
+ 'first_field': 0,
+ 'field': 427,
+ 'id_within_field': 14}
+</pre>
+
+<h2>TAP Queries</h2>
+
+<p>The most advanced way of retriving tabular data from SDSS server is using SQL queries. We will cover non-tabluar data, such as images and spectra, later in this chapter. To retrieve tabular data, you can write SQL queries directly in the <a href="https://skyserver.sdss.org/dr18/SearchTools/sql" target="_blank" rel="noopener">SQL Search</a> page directly, or if you prefer astroquery, you can use <code>query_sql</code> or <code>query_sql_async</code> functions from the <em>astroquery.sdss</em> subpackage. Anyway, you should use the <a href="https://skyserver.sdss.org/dr18/MoreTools/browser" target="_blank" rel="noopener">Schema Browser</a> to find tables from which you want to retrieve data and their columns. There are a lot of tables, views and functions defined in the database. We will only explain a few of them.</p>
+
+<p>The photometric objects are stored in <em>PhotoObjAll</em> table and <em>PhotoObj</em> view. 
+In most cases, you should prefer <em>PhotoObj</em> because it is the same as <em>PhotoObjAll</em> except that it excludes duplicates. Views are precomputed tables and are usualy more user-friendly. So, we recommend using <em>PhotoObj</em> view when you need photometric objects. Each object in this table is identified by <em>objID</em> column.</p>
+
+<p>Each object has been photographed in an image that can be identified by four numbers: <em>run</em>, <em>rerun</em>, <em>camcol</em> and <em>field</em>. These are available as columns of <em>PhotoObj</em> table. Other important columns of this table are: coordinates columns, such as <em>ra</em> and <em>dec</em>, time of observation as <em>mjd</em>, magnitudes in the five bands as <em>u</em>, <em>g</em>, <em>r</em>, <em>i</em>, <em>z</em>. If the object has spectrum, the column <em>specObjID</em> will show a pointer to the spectrum of the object, otherwise it is zero.</p>
+
+
+<pre><code class="language-python">from astroquery.sdss import SDSS
+
+query = """
+SELECT TOP 5 objID, ra, dec, g, r, i
+FROM PhotoObj
+"""
+
+table = SDSS.query_sql(query)
+table.pprint()
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+       objID               ra                 dec          ...    r        i    
+------------------- ---------------- --------------------- ... -------- --------
+1237651758284999323 269.998611639511   0.00196215120961481 ... 20.44656 20.08639
+1237651758284999326 269.997628832911  0.000513699107726668 ... 21.50781 21.13094
+1237651758284999348  270.00269749521 -0.000544961535222983 ... 22.38482 22.10662
+1237651758284999319  270.00047971351   0.00299723797180513 ... 18.85716 18.52543
+1237651758284999325  270.00223779521   0.00303442912755565 ... 21.47168 21.19672
+</pre>
+
+<p>The spectro objects are stored in <em>specObjAll</em> table and <em>SpecObj</em> view. In most cases, we prefer using <em>SpecObj</em> because it only contains spectro objects that have clean spectra and excludes duplicates. Each object these tables is identified by <em>specObjID</em> column. There is one column in this table that helps you join it to <em>PhotoObj</em> table: <em>bestObjID</em>. This is the identifier of this object in <em>PhotoObj</em> table.</p>
+
+<p>An spectro object can be identified by three numbers: <em>plate</em>, <em>mjd</em> and <em>fiberID</em>. These are available as columns of <em>SpecObj</em> table. Other important columns of this table are: coordinates columns, such as <em>ra</em> and <em>dec</em>, redshift as <em>z</em>, spectroscopic class as <em>class</em> (GALAXY, QSO, STAR) and spectroscopic subclass as <em>subClass</em>. The spectrum can also be retrived from the <em>img</em> column as binary string.</p>
+
+
+<pre><code class="language-python">from astroquery.sdss import SDSS
+
+query = """
+SELECT TOP 5 specObjID, bestObjID, ra, dec, z, class, subClass
+FROM SpecObj
+"""
+
+table = SDSS.query_sql(query)
+table.pprint()
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+     specObjID           bestObjID          ra    ...     z     class  subClass
+------------------- ------------------- --------- ... --------- ------ --------
+7220532273447458816 1237667429030887990  167.0121 ... 0.4727115 GALAXY       --
+7220532548325365760                   0 167.06209 ... 0.5114256    QSO       --
+7220532823203272704 1237667322176143863 166.89219 ... 0.4360132 GALAXY       --
+7220533098081179648 1237667322176143497 166.83881 ... 0.3131516 GALAXY       --
+7220533372959086592 1237667429030953133  167.1208 ... 0.3454448 GALAXY       --
+</pre>
+
+<p>If you want some data from <em>PhotoObj</em> and <em>SpecObj</em> at the same time, you can join them. As a simple example, let's say we want the magnitude in <em>g</em> band and redshif <em>z</em> for all objects with magnitudes between 0 and 9.5. You can use this SQL query:</p>
+
+<pre><code class="language-sql">SELECT ph.objID, sp.specObjID, ph.g, sp.z
+FROM PhotoObj as ph
+JOIN SpecObj AS sp
+ON ph.objID = sp.bestObjID
+WHERE ph.g BETWEEN 0 AND 9.5
+</code></pre>
+
+<p>It works, but there is a better solution which is more efficient and more rapid. There is another useful view named <em>SpecPhoto</em>. This is the table of joined Spectro and Photo objects that have the clean spectra. So, instead of the above query, we can use this one:</p>
+
+<pre><code class="language-python">from astroquery.sdss import SDSS
+
+query = """
+SELECT objID, specObjID, modelMag_g, z
+FROM SpecPhoto
+WHERE modelMag_g BETWEEN 0 AND 9.5
+"""
+
+table = SDSS.query_sql(query)
+table.pprint()
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+       objID             specObjID      modelMag_g       z      
+------------------- ------------------- ---------- -------------
+1237657401872285773 3633448406262849536   7.466997           0.0
+1237662307810279473 3383460693507416064   9.300097 -0.0001653606
+1237662619725267128 3383476361548111872   9.449155  0.0001059492
+</pre>
+
+<p>Finally, there's some differences between SDSS TAP queries those we have seen before, such as SIMBAD and Gaia. SDSS SQL does not suuport functions such as CONTAINS and DISTANCE that we have used before. Instead, SDSS database has its own defined functions that can be found in the <a href="https://skyserver.sdss.org/dr18/MoreTools/browser" target="_blank" rel="noopener">Schema Browser</a>. For example, if you want to do a cone search query, you should use the function <em>fGetNearbyObjAllEq</em>. This function accepts <em>ra</em> and <em>dec</em> of a point and <em>radius</em> in arcmins and returns a table of all objects within that region. The example below show how to retrive all objects in a region defined by a point and radius of 1 arcmin.</p>
+
+<pre><code class="language-python">from astroquery.sdss import SDSS
+
+query = """
+SELECT objID, distance 
+FROM dbo.fGetNearbyObjAllEq(229.53, 42.75, 1)
+"""
+
+table = SDSS.query_sql(query)
+table.pprint(max_lines=5)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+       objID             distance    
+------------------- -----------------
+1237662301903192128 0.708324055798664
+1237662301903192124 0.491018598667692
+                ...               ...
+1237662301903192733 0.779932868741668
+1237662301903192715 0.773543282548773
+Length = 49 rows
+</pre>
+
+<p>If all you want is to retrieve all objects in a region, it is better to use <code>query_region</code> funtion. We explain it a few lines after. But there cases where you want to do a cone search in a more complicated query. This is where you should use SDSS functions.</p>
+
+
+<h2>Cone search</h2>
+
+<p>One common search is retriving data from a region in the sky. Suppose that we want to get all photometric objects in a region with radius 1 arcmin:</p>
+
+<pre><code class="language-python">>>> from astropy.coordinates import SkyCoord
+>>> import astropy.units as u
+>>> c = SkyCoord(ra=229.53, dec=42.75, unit='deg')
+</code></pre>
+
+<p>Now we can use the <code>query_region</code> funtion to retrive all photometric objects in a region with radius 1 arcmin. Lets define the region and retrive all objects in it:</p>
+
+<pre><code class="language-python">>>> from astroquery.sdss import SDSS
+>>> tbl_phot = SDSS.query_region(c, radius=1*u.arcmin)
+>>> tbl_phot.pprint(max_lines=5)
+       ra              dec               objid        run  rerun camcol field
+---------------- ---------------- ------------------- ---- ----- ------ -----
+229.546314172273 42.7547652454625 1237662301903192715 3918   301      3   213
+229.547673607444 42.7492671154806 1237662301903192733 3918   301      3   213
+             ...              ...                 ...  ...   ...    ...   ...
+229.523899007084 42.7431517493969 1237662301903192124 3918   301      3   213
+229.519821465398 42.7408625117935 1237662301903192128 3918   301      3   213
+Length = 49 rows
+</code></pre>
+
+<p>There are 49 photometric objects in that region. In means that the fluxes of these objects have been measured in bands <em>u</em>, <em>g</em>, <em>r</em>, <em>i</em> and <em>z</em>. For some of these objects, SDSS team has measured spectra. These bjects are called <em>spectral</em> objects. The <code>query_region</code> funtion has an argument <code>spectro</code>, if we set it to <em>True</em>, the function will return only objects that have spectra. Now, this time, let's just retrieve the spectral objects:</p>
+
+<pre><code class="language-python">>>> tbl_spec = SDSS.query_region(c, radius=1*u.arcmin, spectro=True)
+>>> tbl_spec.pprint(max_lines=5)
+       ra              dec        ...      specobjid       run2d 
+---------------- ---------------- ... ------------------- -------
+229.526534777622  42.744066569489 ... 5814320393805387776 v5_13_2
+229.525575753922 42.7458537608544 ... 1889376924388583424      26
+</code></pre>
+
+<p>Now, you can see that there are only two spectral objects in the region.</p>
+
+<h3>Downloading images</h3>
+
+<p>The <code>SDSS</code> class provides the function <code>get_images</code> to download images. When we say <em>image</em>, we mean the smallest cadre that has been photographed. It is a <em>filed</em> and as explanied earlier, is identified by three parameters: <em>run</em>, <em>camcol</em> and <em>field</em> numbers. So you can pass these numbers to the the function <code>get_images</code> to get the image as a list of <code>HDUList</code> objects. For example, to get the image that contains the first object in the <code>tbl_phot</code> table of the example above, we can do as follows:</p>
+
+<pre><code class="language-python">>>> images = SDSS.get_images(run=3918, camcol=3, field=213)
+>>> len(images)
+1
+>>> type(images[0])
+&lt;class 'astropy.io.fits.hdu.hdulist.HDUList'&gt;
+</code></pre>
+
+<p>Since we provided all of the three parameters that identify an image, the function <code>get_images</code> return a list that has only one <code>HDUList</code> object. If we omit one of these parameters, the function will return all possible images. You can provide the <code>band</code> argument to specify that you want the image in which band. If you dont specify it, as we did not in this example, the image for the <code>'g'</code> band will be downloaded.</p>
+
+Now, let's look at the <code>HDUList</code> object.</p>
+
+<pre><code class="language-python">>>> hdul = images[0]
+>>> hdul.info()
+Filename: (No file associated with this HDUList)
+No.    Name      Ver    Type      Cards   Dimensions   Format
+  0  PRIMARY       1 PrimaryHDU      96   (2048, 1489)   float32   
+  1                1 ImageHDU         6   (2048,)   float32   
+  2                1 BinTableHDU     27   1R x 3C   [49152E, 2048E, 1489E]   
+  3                1 BinTableHDU     79   1R x 31C   [J, 3A, J, A, D, D, 2J, J, D, ... D, D, D, D, E, E] 
+</code></pre>
+
+<p>The image is in the <em>PrimaryHDU</em>. So, we can access it using <code>.data</code> attribute:</p>
+
+<pre><code class="language-python">>>> img = hdul[0].data
+>>> img.shape
+(1489, 2048)
+</code></pre>
+
+<p>We can simply save the image as a FITS file as follows:</p>
+
+<pre><code class="language-python">hdul.writeto('my_sdss_image.fits')
+</code></pre>
+
+<p>We have already explained how to plot images in FITS files. Here, you can see another application of what you have learned before:</p>
+
+<pre><code class="language-python">from astropy.io import fits
+from astropy.wcs import WCS
+import astropy.visualization as vis
+import astropy.units as u
+import matplotlib.pyplot as plt
+
+hdul = fits.open('my_sdss_image.fits')
+img = hdul[0].data
+wcs = WCS(hdul[0].header)
+hdul.close()
+
+ax = plt.subplot(projection=wcs)
+
+ax.coords['ra'].set_major_formatter('dd:mm:ss')
+ax.coords['dec'].set_major_formatter('dd:mm')
+ax.coords['ra'].set_ticks(spacing=3*u.arcmin)
+ax.coords['dec'].set_ticks(spacing=3*u.arcmin)
+
+# normalize the image
+interval = vis.PercentileInterval(99.9)
+vmin, vmax = interval.get_limits(img)
+norm = vis.ImageNormalize(vmin=vmin, vmax=vmax)
+
+plt.imshow(img, cmap='gray', norm=norm, origin='lower')  
+
+plt.grid(color='lightblue', ls='dotted')
+plt.xlabel('RA')
+plt.ylabel('Dec')
+plt.show()
+</code></pre>
+
+<p>Output:</p>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/sdss_image.png" alt="SDSS image of a filed example">
+
+<p>The last thing about the function <code>get_images</code> is that there's a simple of using it if you use it with the   <code>query_region</code> function. You can simply pass the table returned from <code>query_region</code> to <code>get_images</code>. For example, we got tables <code>tbl_phot</code> and <code>tbl_spec</code> in the examples above. We can pass any of these tableq to <code>query_region</code> as follows:</p>
+
+<pre><code class="language-python">from astropy.coordinates import SkyCoord
+import astropy.units as u
+from astroquery.sdss import SDSS
+
+c = SkyCoord(ra=229.53, dec=42.75, unit='deg')
+table = SDSS.query_region(c, radius=1*u.arcmin, spectro=True)
+table.pprint(max_lines=5)
+images = SDSS.get_images(matches=table, band='g')
+print(len(images))
+</code></pre>
+
+<p>Output:</p>
+
+<pre>       ra              dec        ...      specobjid       run2d 
+---------------- ---------------- ... ------------------- -------
+229.526534777622  42.744066569489 ... 5814320393805387776 v5_13_2
+229.525575753922 42.7458537608544 ... 1889376924388583424      26
+2
+</pre>
+
+<p>You can see that two images have been retrieved.</p>
+
+<h3>Image cutouts</h3>
+
+<p>So far, we have seen how to download a images. Note that an image is a single field that contains many objects. Sometimes you need exactly the photo of an object, not the entire filed it belongs to. What we want here, is to obtain a picture centered on our desired coordinates with our desired fields of view (fov). SDSS has provided an API to retrieve image coutouts. I have already implemented it in the <code>sdss</code> python package. For this reason you can create an instance of the <code>Region</code> class by passing the coordinates, your desired width and length in pixels and your desired field of view in degrees.</p>
+
+<pre><code class="language-python">from sdss import Region
+
+reg = Region(ra=229.52569, dec=42.74472, width=300, height=300, fov=0.033, opt='')
+
+reg.show()
+</code></pre>
+
+<p>Output:</p>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/sdss_image_cut.png" alt="SDSS image cutout example">
+
+<p>I passed an empty string to the <code>opt</code> argument because I did not want any extra marks on the image cutout. Refer to SDSS API help for all possible values.</p>
+
+<p>Using the image cutout API is a good idea for simple tasks. If you want to obtain image cutouts of many object in a field, a better idea is to first download that filed as a FITS file (as we did before), then find each object in that image. There is one important question here: Even in a FITS file, the images is given as a numpy array. How can we find the location of an object in the numpy array.</p>
+
+<p>When an image is represented by a numpy array, any point is represented by a pixel. So, the coordinates of the point is in terms of row and column. But, here, we only know the celestail coordinates, as RA and DEC, not pixel row and column. This is where the subpackage <code>wcs</code> from astropy can help us. We have seen before that we can create an instance of <code>WCS</code> class by passing the header of the primary HDU of the FITS file. This instance of <code>WCS</code> is a powerful object that helps us to convert the celectial coordinates to pixel coordinates, using <code>world_to_pixel</code> method. To use this mthod, simply give it he celectial coordinates and it will return its pixel equivalent in that image.</p>
+
+
+<pre><code class="language-python">from astropy.io import fits
+from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+
+hdul = fits.open('my_sdss_image.fits')
+img = hdul[0].data
+wcs = WCS(hdul[0].header)
+hdul.close()
+
+c = SkyCoord(ra=229.52869, dec=42.73472, unit='deg')
+
+x, y = wcs.world_to_pixel(c)
+x, y = round(float(x)), round(float(y))
+d = 150
+
+cutimg = img[x-d:x+d, y-d:y+d]
+</code></pre>
+
+<p>In the above example, <code>x</code> and <code>y</code> are row and column of the pixel that corresponds <code>c</code>. Now that we found the pixel location of our point, we can simply slice the image as we wish.</p>
+
+<h3>Downloading spectra</h3>
+
+
+<p>SDSS collects two major types of spectra: one-dimensional and two-dimensional. Here, I'm going to talk about the 1D spectra.</p>
+
+<p>The spectrum of an object can be identified with three numbers: <em>Plate</em>, <em>MJD</em> and <em>FiberID</em>. The reason behind these numbers is that the SDSS records spectra using aluminum plates placed at focal plane of the telescope. Each plate has a unique <code>plate</code> number and it is connected to the spectroscope via 1000 optical fibers. Each optical fiber transmits the light of one object to the spectroscope and is identified by a unique <code>fiber_id</code>. The date at which the spectrum has been recorded is identified with <code>mjd</code>, which is the <a href="https://scienceworld.wolfram.com/astronomy/ModifiedJulianDate.html" target="_blank" rel="noopener">Modified Julian Date</a>.</p>
+
+<p>Another way that SDSS identifies the spectrum of an object is by an identifier number, called <b>SpecObjID</b>. If you know <em>SpecObjID</em> of an object, you can find the above mentioned parameters using <code>decode_specid</code> function of <a href="https://pypi.org/project/sdss/" target="_blank" rel="noopener">sdss python library</a>:</p>
+
+<pre><code class="language-python">import sdss
+dc = sdss.decode_specid(320932083365079040)
+print(dc)
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+{'plate': 285, 
+ 'fiber_id': 184, 
+ 'mjd': 51930, 
+ 'run2d': 26}
+</pre>
+
+<p>Note that <em>SpecObjID</em> is different from <em>ObjID</em>. We should use <em>ObjID</em> when we need the photometric data of an object, and <em>SpecObjID</em> for spectrometric data. In fact, the number of photometric objects are much higher than spectrometric objects. It means that for most of the objects, there is no spectrometric data.</p>
+
+<p>In astroquery, the <code>SDSS</code> class provides the function <code>get_spectra</code> to download spectrum. This function accepts multiple arguments and you have three ways to use it:
+<ul>
+  <li>pass values to <code>plate</code>, <code>mjd</code> and <code>fiberID</code> arguments</li>
+  <li>pass values to <code>coordinates</code> and <code>radius</code> arguments</li>
+  <li>pass returned table resulted from calling <code>query_region</code> to <code>matches</code> argument</li>
+</ul></p>
+
+<p>Note that in the first method, only one spectrum will be retrieved, but the second and third methods may retrieve spectra for several objects. In any case, the function <code>get_spectra</code> will return a list of <code>HDUList</code> objects. Let's try the first method and retrieve a single spectrum. We will take a look at it and save the retrived object as a FITS file.</p>
+
+<pre><code class="language-python">from astroquery.sdss import SDSS
+
+sp = SDSS.get_spectra(plate=285, mjd=51930, fiberID=184)
+
+hdul = sp[0]
+hdul.info()
+
+hdul.writeto('my_sdss_spec.fits')
+</code></pre>
+
+<p>Output:</p>
+
+<pre>
+Filename: (No file associated with this HDUList)
+No.    Name      Ver    Type      Cards   Dimensions   Format
+  0  PRIMARY       1 PrimaryHDU     142   ()      
+  1  COADD         1 BinTableHDU     26   3839R x 8C   [E, E, E, J, J, E, E, E]   
+  2  SPECOBJ       1 BinTableHDU    262   1R x 126C   [6A, 4A, 16A, 23A, 16A, 8A, E, E, E ... E, J, J, 1A, 5E, 5E]   
+  3  SPZLINE       1 BinTableHDU     48   29R x 19C   [J, J, J, 13A, D, E, E, E, E, E, E, E, E, E, E, J, J, E, E]   
+...
+</pre>
+
+<p>There have been many extension in the object but we ommited it to only show the most important extensions.</p>
+
+<p>For the rest of this section, we will explain these extensions. Let's first import nessesaary packages and open the FITS file.</p>
+
+<pre><code class="language-python">>>> from astropy.io import fits
+>>> from astropy.table import Table
+>>> import astropy.units as u
+>>> import matplotlib.pyplot as plt
+>>> 
+>>> hdul = fits.open('my_sdss_spec.fits')
+</code></pre>
+
+
+<h3>First exension</h3>
+
+<p>The SDSS team saves the spectrum in the fist extension, i.e. the second HDU, named <em>COADD</em>. It is a <em>BinTableHDU</em>. Let's take a look at this table.</p>
+
+<pre><code class="language-python">>>> t1 = Table(hdul[1].data)
+>>> t1.pprint(max_lines=10)
+   flux   loglam     ivar    and_mask  or_mask    wdisp       sky      model  
+--------- ------ ----------- -------- --------- ---------- --------- ---------
+ 4.972567 3.5799   0.0214625 67108864 201326592  1.3625549  5.207638   7.54909
+11.401632   3.58 0.028057458        0  67108864  1.3622649  5.351308 7.5063486
+ 4.585463 3.5801 0.035078116        0   1048576  1.3619561 5.2523303  7.429691
+      ...    ...         ...      ...       ...        ...       ...       ...
+10.810025 3.9635   0.8123945        0         0  0.6128264 3.9820085 11.473688
+12.317144 3.9636  0.75782454        0         0 0.61259586  4.031868 11.527207
+12.532938 3.9637   0.7648859        0         0 0.61236584  4.074711 11.608632
+Length = 3839 rows
+</code></pre>
+
+<p>You can see that the table contains eight columns. The wavelengths are stored in the <em>loglam</em> column in logarithmic scale. The <em>flux</em> column is the raw flux data as recorded by the spectrometer, and the <em>model</em> column is the result of the best fitted model on the flux. In many cases we prefer to use <em>model</em> instead of <em>flux</em>.</p>
+
+<p>The <em>loglam</em> column is in logarithmic scale, so, to extract the wavelengths in <em>Angstrom (AA)</em> we should raise ten to power of these numbers. The unit of flux as used is SDSS spectra is in:</p>
+
+\[ 10^{-17}\cdot erg\cdot cm^{-2}\cdot s^{-1}\cdot AA^{-1} \]
+
+<p>Let's recreate these variables with their appropriate units:</p>
+
+<pre><code class="language-python">>>> t1['wavelength'] = 10 ** t1['loglam'] * u.Unit('AA')
+>>> t1['model'] = t1['model'] * 10**-17 * u.Unit('erg cm-2 s-1 AA-1')
+>>> t1[['wavelength', 'model']].pprint(max_lines=10)
+wavelength         model         
+ Angstrom  erg / (Angstrom s cm2)
+---------- ----------------------
+ 3801.0188            7.54909e-17
+ 3801.8933          7.5063484e-17
+       ...                    ...
+  9193.905          1.1473687e-16
+ 9196.0205          1.1527207e-16
+  9198.141          1.1608632e-16
+Length = 3839 rows
+</code></pre>
+
+<p>Now, we plot <em>model</em> on y-axis and <em>wavelength</em> on x-axis.</p>
+
+<pre><code class="language-python">>>> plt.plot(t1['wavelength'], t1['model'])
+>>> plt.xlabel('Wavelength')
+>>> plt.ylabel('Fitted flux (model)')
+>>> plt.show()
+</code></pre>
+
+<p>Output:</p>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/sdss_spec_plot.png" alt="SDSS spectrum example">
+
+<h3>Second and third extensions</h3>
+
+<p>The second extension, named <em>SPECOBJ</em>, gives us some information about the object, such as coordinates, class of object, redshift, etc. Most of these could be requested by SQL scripts directly from the SDSS servers, however, it is possible to get these information from the FITS file. You can use the <code>.columns</code> attribute to see all of the columns available in the table of this HDU. Let's find class, subclass and redshift of the object:</p>
+
+<pre><code class="language-python">>>> print(hdul[2].data.field('CLASS'))
+['GALAXY']
+>>> print(hdul[2].data.field('SUBCLASS'))
+['STARFORMING']
+>>> print(hdul[2].data.field('Z'))
+[0.09484052]
+</code></pre>
+
+<p>The object we are analysing is a starforming galaxy whose redshift is 0.09484052. This is the final redshift calculated by SDSS pipeline.</p>
+
+<p>The third extension, named <em>SPZLINE</em>, gives us information about emission lines. The table of this extension has many columns, but here, we are interested in four of them. The column <em>LINENAME</em> is the name of the emission lines; <em>LINEWAVE</em> is the wavelength of the lines at rest, i.e. the emitted wavelength; <em>LINEZ</em> is the redshift calculated for each line; and  
+<em>LINEAREA</em> is the calculated area of lines, which shows how strong is each line.<p>
+
+<pre><code class="language-python">>>> t3 = Table(hdul[3].data)
+>>> t3 = t3[['LINENAME', 'LINEWAVE', 'LINEZ', 'LINEAREA']]
+>>> t3.pprint(max_lines=20)
+   LINENAME        LINEWAVE         LINEZ     LINEAREA 
+------------- ------------------ ----------- ----------
+Ly_alpha                 1215.67         0.0        0.0
+N_V 1240                 1240.81         0.0        0.0
+C_IV 1549                1549.48         0.0        0.0
+He_II 1640               1640.42         0.0        0.0
+C_III] 1908             1908.734         0.0        0.0
+Mg_II 2799    2800.3151836549728         0.0        0.0
+[O_II] 3725    3727.091726797987  0.09487071   30.99683
+[O_II] 3727    3729.875447997208  0.09487071  24.527514
+          ...                ...         ...        ...
+[S_III] 6312   6313.805532906624 0.094870396 0.44267502
+[O_I] 6363     6365.535419574267  0.09487107   4.292485
+[N_II] 6548    6549.858929253789  0.09487106  15.137597
+H_alpha        6564.613894333284  0.09487044  83.739006
+[N_II] 6583   6585.2684452471885  0.09486971  54.291546
+[S_II] 6716     6718.29420811581  0.09487086  23.901695
+[S_II] 6730    6732.678076327587  0.09487128   12.85966
+[Ar_III] 7135  7137.757103334721 0.094871484 -1.5719963
+Length = 29 rows
+</code></pre>
+
+<p>Note that the area of some lines is zero. It means that these line do not appear on the spectrum. You may want to draw the lines on the plot of spectrum. For this reason, we should calculate the <em>observed</em> lines. According to the definition of redshift:</p>
+
+\[ \lambda_{obs} = \lambda_{rest}(1+z) \]
+
+<p>Using this formula, we can calculate the observed wavelength of the lines easily. But first let's get rid of the lines with zero area:</p>
+
+<pre><code class="language-python">>>> t3 = t3[t3['LINEAREA']!=0.0]
+>>> t3['obs'] = t3['LINEWAVE'] * (1 + t3['LINEZ'])
+</code></pre>
+
+<p>Finally, to finish this section and as a review, let's draw the plot of the spectrum with the emmision lines. To better see the lines, we limit the plot for wavelengths between 7100 to 7500 Angstrom. By deleting <code>plt.xlim</code>, you can draw the full plot or by changing the limit you can zoom on any part of the spectrum.</p>
+
+<pre><code class="language-python">from astropy.io import fits
+from astropy.table import Table
+import astropy.units as u
+import matplotlib.pyplot as plt
+
+hdul = fits.open('my_sdss_spec.fits')
+
+t1 = Table(hdul[1].data)
+t1['wavelength'] = 10 ** t1['loglam'] * u.Unit('AA')
+t1['model'] = t1['model'] * 10**-17 * u.Unit('erg cm-2 s-1 AA-1')
+t1[['wavelength', 'model']].pprint(max_lines=10)
+
+t3 = Table(hdul[3].data)
+t3 = t3[['LINENAME', 'LINEWAVE', 'LINEZ', 'LINEAREA']]
+t3 = t3[t3['LINEAREA']!=0.0]
+t3['obs'] = t3['LINEWAVE'] * (1 + t3['LINEZ'])
+
+
+fig, ax = plt.subplots(figsize=(8,5))
+
+ax.plot(t1['wavelength'], t1['model'], linewidth=1)
+
+for i in range(len(t3)):
+    ax.axvline(x=t3['obs'].value[i],
+               color='r', 
+               alpha=0.3,
+               label=t3['LINENAME'].value[i],
+               ls='--',
+               lw=0.7)
+    
+    ax.text(x=t3['obs'].value[i] ,
+            y=t1['model'].min()*1.1,
+            s=t3['LINENAME'].value[i],
+            fontsize='small',
+            rotation=90)
+
+plt.xlim(7100, 7500)
+plt.xlabel('Wavelength')
+plt.ylabel('Fitted flux (model)')
+plt.show()
+</code></pre>
+
+<p>Output:</p>
+
+<img src="https://raw.githubusercontent.com/behrouzz/astrodatascience/main/img/sdss_spec_lines.png" alt="SDSS spectrum emission lines">
+
+<pre>
+https://www.sdss.org/dr18/tutorials/
+https://skyserver.sdss.org/dr18/
+</pre>
+
+</body>
+</html>
+
