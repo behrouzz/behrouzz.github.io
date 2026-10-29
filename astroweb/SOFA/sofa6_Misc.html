@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>SOFA - Miscellaneous Topics</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>SOFA: Miscellaneous Topics</h1>
+
+<p>The previous chapters covered the big subjects. SOFA also contains a few smaller, self-contained groups of functions. Most of the time a short description and the name of the function are all you need, so in this chapter each topic gets a few lines and a short example.</p>
+
+
+<p>All the examples of this page start from the same few lines:</p>
+
+<pre><code class="language-python">import numpy as np
+import erfa
+
+DD2R, DR2D, DAS2R, DMAS2R = erfa.DD2R, erfa.DR2D, erfa.DAS2R, erfa.DMAS2R</code></pre>
+
+<h2>Ecliptic coordinates</h2>
+
+<p>The ecliptic is the plane of the Earth's orbit around the Sun, and ecliptic longitude and latitude \((\lambda, \beta)\) are natural for the Solar System. Classically one converts from equatorial coordinates by a single rotation about the x axis by the obliquity of the ecliptic. But since the IAU resolutions of 2000 the ecliptic is no longer a basis for precise work, and the ICRS replaces the mean J2000.0 system. SOFA offers three functions, all based on the IAU 2006 precession. They combine the <em>mean equinox and ecliptic of date</em> (for \(\lambda, \beta\)) with the <em>ICRS</em> (for \(\alpha, \delta\)):</p>
+
+<ul>
+  <li><code>eqec06(date1, date2, dr, dd)</code>: ICRS right ascension and declination to ecliptic longitude and latitude \((\lambda, \beta)\).</li>
+  <li><code>eceq06(date1, date2, dl, db)</code>: the inverse.</li>
+  <li><code>ecm06(date1, date2)</code>: the rotation matrix. If you have many positions to transform, compute it once and use <code>rxp</code>.</li>
+</ul>
+
+<p>The date is given in TT as a two-part Julian date. As an example, we compute the ecliptic coordinates of Regulus (ICRS \(\alpha = 10^h 08^m 22.311^s\), \(\delta = +11^\circ 58' 01.95''\)), which is very close to the ecliptic, on two dates twenty-four years apart. The longitude increases by about 0.33&deg;, because of precession:</p>
+
+<pre><code class="language-python">ra  = erfa.tf2a(&quot;+&quot;, 10, 8, 22.311)
+dec = erfa.af2a(&quot;+&quot;, 11, 58, 1.95)
+
+for year in (2000, 2024):
+    tt1, tt2 = erfa.dtf2d(&quot;TT&quot;, year, 1, 1, 12, 0, 0.0)
+    lon, lat = erfa.eqec06(tt1, tt2, ra, dec)
+    print(f&quot;{year}: ecliptic longitude = {lon * DR2D:8.4f} deg, latitude = {lat * DR2D:7.4f} deg&quot;)
+
+# the inverse brings us back
+ra2, dec2 = erfa.eceq06(tt1, tt2, lon, lat)
+print(&quot;round trip error:&quot;, abs(ra2 - ra) / DAS2R, &quot;arcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">2000: ecliptic longitude = 149.8291 deg, latitude =  0.4648 deg
+2024: ecliptic longitude = 150.1644 deg, latitude =  0.4662 deg
+round trip error: 0.0 arcsec</code></pre>
+
+<h2>Galactic coordinates</h2>
+
+<p>Galactic longitude and latitude \((l, b)\) are based on the plane of our Milky Way, and Sagittarius A* (the centre of the Galaxy) is close to \(l = 0\), \(b = 0\). The old IAU 1958 definition has some problems, and SOFA does not try to reproduce it exactly: it uses a rotation matrix like the one published with the Hipparcos catalog. There are two functions, for ICRS \(\leftrightarrow\) galactic: <code>icrs2g(dr, dd)</code> and <code>g2icrs(dl, db)</code>.</p>
+
+<pre><code class="language-python"># Sagittarius A*, the radio source at the center of the Milky Way (ICRS)
+ra  = erfa.tf2a(&quot;+&quot;, 17, 45, 40.04)
+dec = erfa.af2a(&quot;-&quot;, 29, 0, 28.1)
+l, b = erfa.icrs2g(ra, dec)
+print(f&quot;Sgr A*: l = {l * DR2D:.3f} deg, b = {b * DR2D:+.3f} deg&quot;)
+
+# where is the north galactic pole in the ICRS?
+ra_ngp, dec_ngp = erfa.g2icrs(0.0, np.pi / 2)
+print(f&quot;North galactic pole: RA = {ra_ngp * DR2D:.3f} deg, Dec = {dec_ngp * DR2D:+.3f} deg&quot;)</code></pre>
+<pre><code class="language-plaintext">Sgr A*: l = 359.944 deg, b = -0.046 deg
+North galactic pole: RA = 192.859 deg, Dec = +27.128 deg</code></pre>
+
+<h2>Hipparcos and FK5</h2>
+
+<p>The FK5 was the standard star catalog before the ICRS. The Hipparcos catalog, which realizes the ICRS, differs from it, mostly in two ways: the whole FK5 system is rotated with respect to the Hipparcos system by about 32 mas, and it slowly spins by about 1 mas per year. Five SOFA functions convert catalog entries (positions, proper motions, parallax and radial velocity) between the two:</p>
+
+<ul>
+  <li><code>h2fk5</code> and <code>fk52h</code>: Hipparcos entry &harr; FK5 entry.</li>
+  <li><code>hfk5z</code> and <code>fk5hz</code>: the same for stars for which the proper motion, the parallax and the radial velocity are all unknown (they need the date).</li>
+  <li><code>fk5hip</code>: gives the orientation and the spin in the form that the other functions use.</li>
+</ul>
+
+<p>The proper motions are in radians per year as \(d\alpha/dt\), and the parallax in arcseconds, as in all SOFA functions. Let us take a star and see how its FK5 values differ from the Hipparcos ones (the star is the one that we met in the Astrometry chapter), and also the orientation and spin of the FK5 relative to Hipparcos:</p>
+
+<pre><code class="language-python">rh = erfa.tf2a(&quot;+&quot;, 14, 34, 16.81183)
+dh = erfa.af2a(&quot;-&quot;, 12, 31, 10.3965)
+drh = np.arctan2(-354.45e-3 * DAS2R, np.cos(dh))      # d(alpha)/dt in rad/yr
+ddh = 595.35e-3 * DAS2R
+pxh, rvh = 0.16499, 0.0
+
+r5, d5, dr5, dd5, px5, rv5 = erfa.h2fk5(rh, dh, drh, ddh, pxh, rvh)
+print(f&quot;position difference FK5 - Hipparcos:  {(r5 - rh) * np.cos(dh) / DMAS2R:6.2f} mas in RA*cos(dec), &quot;
+      f&quot;{(d5 - dh) / DMAS2R:6.2f} mas in Dec&quot;)
+print(f&quot;proper-motion difference (mas/yr):    {(dr5 - drh) * np.cos(dh) / DMAS2R:6.2f}, {(dd5 - ddh) / DMAS2R:6.2f}&quot;)
+
+# orientation (a rotation matrix) and spin (an r-vector in rad/yr) of the FK5 relative to Hipparcos
+orientation, spin = erfa.fk5hip()
+print(&quot;spin of FK5 (mas/yr):&quot;, np.round(spin / DMAS2R, 2))</code></pre>
+<pre><code class="language-plaintext">position difference FK5 - Hipparcos:   26.96 mas in RA*cos(dec),   5.29 mas in Dec
+proper-motion difference (mas/yr):      0.65,   0.66
+spin of FK5 (mas/yr): [-0.3  0.6  0.7]</code></pre>
+
+<h2>FK4 and FK5</h2>
+
+<p>Before the FK5 (1980s), positions were published in the FK4 system, usually for the equinox B1950.0. The conversion to modern coordinates is more than a precession from 1950 to 2000. The precession model itself changed, the practice of including part of the annual aberration in the catalog positions (the <em>E-terms</em>) was abandoned, and the system of proper motions was corrected for the rotation of the Galaxy. If you read a position published before 1984 and need J2000.0 coordinates, <b>do not just precess it</b>: use these functions.</p>
+
+<ul>
+  <li><code>fk425</code>: FK4 (B1950.0) entry &rarr; FK5 (J2000.0) entry.</li>
+  <li><code>fk45z</code>: the same for a star with unknown proper motion, parallax and radial velocity; it needs the Besselian epoch of the observation.</li>
+  <li><code>fk524</code> and <code>fk54z</code>: the opposite direction.</li>
+</ul>
+
+<pre><code class="language-python"># a position from an old catalog, B1950.0: 10h 00m 00s, +30 00 00; epoch of observation 1950.0
+r1950 = erfa.tf2a(&quot;+&quot;, 10, 0, 0.0)
+d1950 = erfa.af2a(&quot;+&quot;, 30, 0, 0.0)
+
+r2000, d2000 = erfa.fk45z(r1950, d1950, 1950.0)
+
+sign, t = erfa.a2tf(2, r2000)
+sign2, d = erfa.a2af(1, d2000)
+print(f&quot;J2000.0: {t[&#x27;h&#x27;]:02d} {t[&#x27;m&#x27;]:02d} {t[&#x27;s&#x27;]:02d}.{t[&#x27;f&#x27;]:02d}  &quot;
+      f&quot;{sign2.decode()}{d[&#x27;h&#x27;]:02d} {d[&#x27;m&#x27;]:02d} {d[&#x27;s&#x27;]:02d}.{d[&#x27;f&#x27;]}&quot;)
+
+# for comparison: only the IAU 1976 precession, without the FK4 particularities
+d1, d2 = erfa.epb2jd(1950.0)
+rp = erfa.pmat76(d1, d2)                       # precession matrix J2000.0 -&gt; B1950.0
+v = erfa.trxp(rp, erfa.s2c(r1950, d1950))      # use its transpose to go from 1950 to 2000
+ra_p, dec_p = erfa.c2s(v)
+print(f&quot;precession alone differs by {erfa.seps(ra_p, dec_p, r2000, d2000) / DAS2R:.2f} arcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">J2000.0: 10 02 52.73  +29 45 29.0
+precession alone differs by 0.28 arcsec</code></pre>
+
+<p>The position moved by about two-thirds of a degree in 50 years, mostly because of the precession of the equinoxes. A conversion with the precession alone differs from the correct one by 0.28 arcseconds, which is small for the eye but huge compared with the precision of modern astrometry (milliarcseconds). This is the effect of the E-terms and the other peculiarities of FK4.</p>
+
+<h2>Geodesy: the shape of the Earth</h2>
+
+<p>Many calculations need the position of the observer, and a sphere is a poor model of the Earth: an oblate spheroid (an ellipsoid flattened at the poles) is 2 or 3 orders of magnitude better. SOFA supports only this level; for the finer effects (tides, the real surface) you need other software.</p>
+
+<ul>
+  <li><code>eform(n)</code> gives the equatorial radius \(a\) (in meters) and the flattening \(f = (a-b)/a\) of a standard ellipsoid: <code>erfa.WGS84</code> (1), <code>erfa.GRS80</code> (2) or <code>erfa.WGS72</code> (3).</li>
+  <li><code>gd2gc(n, elong, phi, height)</code> converts <em>geodetic</em> coordinates to the geocentric Cartesian vector (in meters). <code>gc2gd</code> does the opposite. The versions <code>gd2gce</code> and <code>gc2gde</code> take the parameters \(a\) and \(f\) of any ellipsoid.</li>
+</ul>
+
+<p>Here, <em>geodetic</em> latitude is the angle between the equator and the line normal to the ellipsoid (what a map, a GPS and a plumb line give), while <em>geocentric</em> latitude is the angle seen from the centre of the Earth. They differ by up to 0.19&deg; at mid-latitudes. The height is measured above the ellipsoid. Let us convert the position of the observing site used in the Astrometry chapter (Strasbourg) and see the difference:</p>
+
+<pre><code class="language-python">for n in (1, 2, 3):
+    a, f = erfa.eform(n)
+    print(f&quot;ellipsoid {n}: a = {a:.1f} m, 1/f = {1 / f:.6f}&quot;)
+
+elong = 7.744083817548831 * DD2R
+phi = 48.58313582900411 * DD2R
+height = 140.0
+
+xyz = erfa.gd2gc(1, elong, phi, height)                  # WGS84
+print(&quot;geocentric vector (m):&quot;, np.round(xyz, 2))
+
+lon, lat, h = erfa.gc2gd(1, xyz)                         # and back
+print(f&quot;back to geodetic: lon = {lon * DR2D:.8f}, lat = {lat * DR2D:.8f}, height = {h:.3f} m&quot;)
+
+geocentric_lat = np.arctan2(xyz[2], np.hypot(xyz[0], xyz[1]))
+print(f&quot;geodetic latitude   = {phi * DR2D:.4f} deg&quot;)
+print(f&quot;geocentric latitude = {geocentric_lat * DR2D:.4f} deg&quot;)</code></pre>
+<pre><code class="language-plaintext">ellipsoid 1: a = 6378137.0 m, 1/f = 298.257224
+ellipsoid 2: a = 6378137.0 m, 1/f = 298.257222
+ellipsoid 3: a = 6378135.0 m, 1/f = 298.260000
+geocentric vector (m): [4188848.49  569636.73 4760123.36]
+back to geodetic: lon = 7.74408382, lat = 48.58313583, height = 140.000 m
+geodetic latitude   = 48.5831 deg
+geocentric latitude = 48.3921 deg</code></pre>
+
+<h2>Solar System ephemerides</h2>
+
+<p>An <em>ephemeris</em> gives the positions of the bodies of the Solar System at any time. SOFA has very little in this area. High-precision ephemerides (such as the ones of the JPL) have no official IAU status and they need big data files, which does not match the idea of a self-contained library. Only three tools, all without IAU status, are provided:</p>
+
+<ul>
+  <li><code>epv00(date1, date2)</code>: the position and velocity of the <b>Earth</b>, heliocentric and barycentric, with an accuracy of about 10 km and 5 mm/s. It is based on a shortened version of the VSOP2000 planetary theory, and is used by many other SOFA functions (for example, for aberration and parallax).</li>
+  <li><code>moon98(date1, date2)</code>: the geocentric position and velocity of the <b>Moon</b>, accurate to about 20 km (some arcseconds for an observer on Earth). Good for visibility, rise and set times, but not for eclipses and occultations.</li>
+  <li><code>plan94(date1, date2, np)</code>: the heliocentric position and velocity of the <b>planets</b>. The number <code>np</code> selects the body: 1 Mercury, 2 Venus, 3 the Earth-Moon barycentre, 4 Mars, 5 Jupiter, 6 Saturn, 7 Uranus, 8 Neptune. It is very approximate: a few arcseconds for Mercury and Venus and up to a few arcminutes for the outer planets. Fine for a "planetarium" program.</li>
+</ul>
+
+<p>The dates are given as two-part Julian dates in TDB (TT can be used instead, with no visible effect). All three functions return a <em>pv-vector</em>: a structured NumPy value with the position <code>'p'</code> in au and the velocity <code>'v'</code> in au/day. Let us see the distance from the Earth to the Sun at the Earth's closest and farthest points of 2024, the distance to the Moon, and the distance of Jupiter from the Sun:</p>
+
+<pre><code class="language-python">AU_KM = erfa.DAU / 1000          # one au in km
+
+for label, (year, month, day) in [(&quot;perihelion time&quot;, (2024, 1, 3)), (&quot;aphelion time  &quot;, (2024, 7, 5))]:
+    utc1, utc2 = erfa.dtf2d(&quot;UTC&quot;, year, month, day, 12, 0, 0.0)
+    tai1, tai2 = erfa.utctai(utc1, utc2)
+    tt1, tt2 = erfa.taitt(tai1, tai2)
+
+    pvh, pvb = erfa.epv00(tt1, tt2)                       # the Earth
+    earth_sun = np.linalg.norm(pvh[&quot;p&quot;])                  # au
+
+    moon = erfa.moon98(tt1, tt2)                          # geocentric Moon
+    earth_moon = np.linalg.norm(moon[&quot;p&quot;]) * AU_KM        # km
+
+    jupiter = erfa.plan94(tt1, tt2, 5)                    # heliocentric Jupiter
+    sun_jupiter = np.linalg.norm(jupiter[&quot;p&quot;])            # au
+
+    print(f&quot;{year}-{month:02d}-{day:02d} ({label}): Earth-Sun = {earth_sun:.4f} au, &quot;
+          f&quot;Earth-Moon = {earth_moon:,.0f} km, Sun-Jupiter = {sun_jupiter:.3f} au&quot;)</code></pre>
+<pre><code class="language-plaintext">2024-01-03 (perihelion time): Earth-Sun = 0.9833 au, Earth-Moon = 402,775 km, Sun-Jupiter = 4.985 au
+2024-07-05 (aphelion time  ): Earth-Sun = 1.0167 au, Earth-Moon = 385,296 km, Sun-Jupiter = 5.028 au</code></pre>
+
+<p>The Earth is closest to the Sun (0.983 au) in early January and farthest (1.017 au) in early July, as expected. The Moon's distance changes during the month between about 357,000 and 406,000 km, so the two values simply show where the Moon was on those two dates. For better planetary positions, use a JPL ephemeris, for example through the package <code>numeph</code> (in the section "Python Packages" of this website) or through astropy.</p>
+
+<h2>Summary</h2>
+
+<ul>
+  <li><b>Ecliptic:</b> <code>eqec06</code>, <code>eceq06</code>, <code>ecm06</code> (ICRS &harr; mean ecliptic of date).</li>
+  <li><b>Galactic:</b> <code>icrs2g</code>, <code>g2icrs</code>.</li>
+  <li><b>Hipparcos &harr; FK5:</b> <code>h2fk5</code>, <code>hfk5z</code>, <code>fk52h</code>, <code>fk5hz</code>, <code>fk5hip</code>.</li>
+  <li><b>FK4 &harr; FK5:</b> <code>fk425</code>, <code>fk45z</code>, <code>fk524</code>, <code>fk54z</code>. Never convert B1950 positions by precession alone.</li>
+  <li><b>Geodesy:</b> <code>eform</code>, <code>gd2gc</code>, <code>gc2gd</code>, <code>gd2gce</code>, <code>gc2gde</code>.</li>
+  <li><b>Ephemerides:</b> <code>epv00</code> (Earth), <code>moon98</code> (Moon), <code>plan94</code> (planets). They are all approximate.</li>
+</ul>
+
+
+</body>
+</html>

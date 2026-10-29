@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>SOFA - Tools for Earth Attitude</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>SOFA: Tools for Earth Attitude</h1>
+
+<p>The Earth is not a fixed platform. Its axis slowly changes direction, wobbles a little, and the planet spins at a speed that is not perfectly constant. To say where a star is in the local sky of an observer, or to know where on the Earth's surface a satellite is passing above, we must know the <em>orientation</em> (the attitude) of the Earth at the moment of interest. This chapter explains how SOFA describes that orientation and how to compute it with <code>pyerfa</code>.</p>
+
+<h2>Where is the star? A short tour of coordinate systems</h2>
+
+<p>To specify the direction of a star we need to answer three questions: what type of coordinates, which reference axes (where is the pole and where is longitude zero), and which observer. The reference axes are the part that concerns us here.</p>
+
+<h3>Precession and nutation</h3>
+
+<p>You know right ascension \(\alpha\) and declination \(\delta\): they are the longitude and latitude on a sphere based on the Earth's rotation axis. The zero point of right ascension was classically the <em>equinox</em>, the point where the Sun crosses the celestial equator going north. But the picture is complicated because the Sun, the Moon and the planets pull on the Earth's equatorial bulge, and so neither the equator nor the ecliptic (the plane of the Earth's orbit) are fixed. The consequence is that the \(\alpha\) and \(\delta\) of a star change all the time, even if the star itself does not move.</p>
+
+<ul>
+  <li><b>Precession</b> is the slow, large part. The Earth's axis draws a cone around the pole of the ecliptic in about 26,000 years. The equinox moves along the ecliptic by roughly 50 arcseconds each year.</li>
+  <li><b>Nutation</b> is the collection of small periodic wobbles on top of precession. The biggest term has a period of 18.6 years, with an amplitude of the order of ten arcseconds.</li>
+</ul>
+
+<p>These two are in reality parts of one phenomenon, separated only because their sizes are so different. The models come from a mixture of theory and observation and are improved from time to time. The nutation model of 1980 (IAU 1980) has 106 terms in each of the two angles, while the modern one (IAU 2000A) has 1365 terms, some smaller than a tenth of a microarcsecond.</p>
+
+<h3>Old and new reference systems</h3>
+
+<p>With the textbook system (equator and equinox of date) it was hard to do high-precision work, because both the equator and the ecliptic were moving and the ecliptic itself was not clearly defined. At the beginning of the 21st century the International Astronomical Union (IAU) changed the recommended procedures in four ways:</p>
+
+<ol>
+  <li><b>A fixed reference system.</b> The <em>International Celestial Reference System</em> (ICRS) has axes fixed with respect to distant extragalactic objects. It does not depend on the motion of the Earth at all, so a star has ICRS coordinates that change only because of its own motion. The ICRS was oriented so that it coincides with the old J2000.0 mean equator and equinox system within about 25 milliarcseconds, only for continuity. Two companions describe the same axes for different observers: the <em>Barycentric</em> (BCRS) and the <em>Geocentric</em> (GCRS) celestial reference systems.</li>
+  <li><b>No more ecliptic</b> as the basis for precise work.</li>
+  <li><b>Earth rotation angle instead of sidereal time.</b> The <em>Earth Rotation Angle</em> (ERA) is a simple linear function of UT1 only. Sidereal time was a complicated function of both UT1 and time.</li>
+  <li><b>A new zero point of right ascension:</b> the <em>Celestial Intermediate Origin</em> (CIO) replaces the equinox. The CIO is a point on the equator which is defined by its motion: it moves as little as possible along the equator (it only moves north and south as the equator tilts). In the 20th and 21st centuries it stays within 0.1 arcsecond of the GCRS right ascension zero.</li>
+</ol>
+
+<p>The result is that the sequence of coordinate systems that connect a star in the ICRS to what the observer sees is the following:</p>
+
+<pre>
+ICRS  [ra, dec, proper motion, parallax, radial velocity]
+  |  space motion, parallax
+  v
+astrometric [ra, dec]
+  |  light deflection, aberration
+  v
+GCRS  [ra, dec]
+  |  frame bias, precession-nutation        &lt;-- the matrix R_NPB (this chapter)
+  v
+CIRS  [ra, dec]       (Celestial Intermediate Reference System)
+  |  Earth rotation angle                   &lt;-- ERA(UT1)
+  v
+TIRS  [ra, dec]       (Terrestrial Intermediate Reference System)
+  |  polar motion                           &lt;-- matrix R_PM
+  v
+ITRS  [x, y, z]       (International Terrestrial Reference System)
+  |  longitude, latitude of the observer
+  v
+local [hour angle, dec]  -->  [azimuth, zenith distance]
+</pre>
+
+<p>The old route, with the equinox and sidereal time, is still supported by SOFA for old applications. It replaces CIRS by the <em>geocentric apparent place</em> and the Earth rotation angle by the <em>Greenwich apparent sidereal time</em> (GST). SOFA's advice is clear: <b>use the CIO-based method for every new application</b>.</p>
+
+<h3>Some important quantities</h3>
+
+<ul>
+  <li><b>Frame bias.</b> The ICRS pole and the J2000.0 mean pole are not exactly the same. The pole of J2000.0 sits at \(X = -0.016617''\), \(Y = -0.0068192''\) in the ICRS and the mean equinox lies 0.0146'' west of the ICRS meridian. This tiny rotation (23 mas in total) is the <em>frame bias</em>.</li>
+  <li><b>The CIP.</b> The <em>Celestial Intermediate Pole</em> is the instantaneous pole of the Earth, as moved by precession and nutation. In the modern method it is given by just the two numbers \(X\) and \(Y\): the first two components of its unit vector in the GCRS.</li>
+  <li><b>The CIO locator \(s\).</b> It tells where the CIO is located on the CIP equator. It is tiny (about &minus;0.002 arcseconds in 2007), and SOFA computes it with a series. (More exactly, SOFA models \(s + XY/2\) and then subtracts the second term.)</li>
+  <li><b>The TIO locator \(s'\).</b> The same idea on the terrestrial side, for the <em>Terrestrial Intermediate Origin</em> (TIO). It is smaller than 0.1 mas even after two centuries, so it's often ignored. The function is <code>sp00</code>.</li>
+  <li><b>The equation of the origins (EO).</b> It is the angular distance between the CIO and the equinox, along the equator. It is what links the new and old systems: \(EO = ERA - GST\). It changes by about 46 arcseconds per year, mainly because of precession. If you have to support both methods, work with the CIO and use the EO to convert.</li>
+</ul>
+
+<p>The hour angle \(h\) is computed in the same way in both systems, \(h = \theta - \alpha\) (plus the observer's east longitude), where \(\theta\) is the Earth rotation angle (or the sidereal time in the old system) and \(\alpha\) is the right ascension (CIRS or apparent, respectively). Both give the same hour angle. A very important warning: in the old system the sidereal time model must <em>match</em> the precession-nutation model. Mixing an old and a new model gives hour angle errors of about 0.05 arcseconds. In the CIO-based method, there is no such trap.</p>
+
+<h3>From the sky to the ground: the whole chain as one equation</h3>
+
+<p>Frame bias, precession-nutation, Earth rotation and polar motion are four rotations, applied one after the other. In matrix form, a direction written in the GCRS becomes a direction in the ITRS by:</p>
+
+<p>$$\mathbf{v}_{ITRS} = R_{PM}\; R_3(\theta)\; R_{NPB}\; \mathbf{v}_{GCRS}$$</p>
+
+<p>where \(R_{NPB}\) is the matrix for bias, precession and nutation, \(R_3(\theta)\) is a rotation about the z axis by the Earth rotation angle (or by GST if \(R_{NPB}\) is equinox based) and \(R_{PM}\) is the polar-motion matrix. The SOFA function <code>c2t06a</code> computes exactly this complete product for you.</p>
+
+<h2>The SOFA functions</h2>
+
+<p>SOFA supports several generations of models. Here we list them with the pyerfa names. Do not try to learn this list: it is a map for later reference.</p>
+
+<h3>Precession and obliquity</h3>
+
+<ul>
+  <li>IAU 1976 (Fricke-Lieske): <code>prec76</code> (the three Euler angles) and <code>pmat76</code> (the matrix).</li>
+  <li>IAU 2000: <code>pr00</code> (corrections to the precession rates), <code>bi00</code> (frame bias), <code>pmat00</code> (precession+bias matrix), <code>bp00</code> (bias and precession matrices separately).</li>
+  <li>IAU 2006 (Capitaine et al.): <code>pfw06</code> gives the four <em>Fukushima-Williams angles</em> \(\gamma, \phi, \psi, \epsilon\) which include frame bias, and <code>pmat06</code> gives the matrix. A neat advantage of this form is that the nutation angles can simply be added to the two last angles.</li>
+  <li>Mean obliquity of the ecliptic: <code>obl80</code> (IAU 1976) and <code>obl06</code> (IAU 2006).</li>
+</ul>
+
+<h3>Nutation</h3>
+
+<ul>
+  <li><code>nut80</code> (IAU 1980), <code>nut00a</code> (IAU 2000A, the best) and <code>nut00b</code> (IAU 2000B, a short version with 1 mas accuracy in 1995&ndash;2050). Each returns the nutation in longitude \(\Delta\psi\) and in obliquity \(\Delta\epsilon\).</li>
+  <li><code>nut06a</code> is IAU 2000A with the small adjustments needed to be consistent with the IAU 2006 precession.</li>
+  <li>From the two angles, <code>numat</code> builds the nutation matrix. In one step: <code>nutm80</code>, <code>num00a</code>, <code>num00b</code>, <code>num06a</code>.</li>
+</ul>
+
+<h3>The CIP, the CIO and polar motion</h3>
+
+<ul>
+  <li>The coordinates \(X, Y\) of the CIP: <code>bpn2xy</code> (from a bias-precession-nutation matrix), <code>xys00a</code> and <code>xys00b</code> (also return \(s\)), <code>fw2xy</code> (from Fukushima-Williams angles), and <code>xy06</code> (directly from a series).</li>
+  <li>The CIO locator \(s\): <code>s00</code>, <code>s00a</code>, <code>s00b</code>, <code>s06</code>, <code>s06a</code>. The versions without a letter at the end are faster when you already have \(X, Y\).</li>
+  <li>Polar motion: <code>pom00</code> builds \(R_{PM}\) from the pole coordinates \(x_p, y_p\) (published by the IERS) and \(s'\), which comes from <code>sp00</code>.</li>
+</ul>
+
+<h3>Earth rotation</h3>
+
+<ul>
+  <li>Earth rotation angle: <code>era00</code>. That is all you need for the modern method.</li>
+  <li>Greenwich mean sidereal time: <code>gmst82</code>, <code>gmst00</code>, <code>gmst06</code>.</li>
+  <li>Equation of the equinoxes: <code>eqeq94</code>, <code>ee00</code>, <code>ee00a</code>, <code>ee00b</code>, <code>ee06a</code>, plus <code>eect00</code> for the small "complementary terms".</li>
+  <li>Greenwich apparent sidereal time \(GST = GMST + EE\): <code>gst94</code>, <code>gst00a</code>, <code>gst00b</code>, <code>gst06</code>, <code>gst06a</code>.</li>
+</ul>
+
+<h3>The "fundamental arguments"</h3>
+
+<p>The nutation series and the series for \(X, Y\) and \(s\) are written in terms of 14 angles which depend on time: the Delaunay variables (<code>fal03</code>, <code>falp03</code>, <code>faf03</code>, <code>fad03</code>, <code>faom03</code>), the mean longitudes of the planets from Mercury to Neptune (<code>fame03</code>, <code>fave03</code>, <code>fae03</code>, <code>fama03</code>, <code>faju03</code>, <code>fasa03</code>, <code>faur03</code>, <code>fane03</code>) and the general precession <code>fapa03</code>. You will not need them directly.</p>
+
+<h3>The current models and the high-level functions</h3>
+
+<p>The most recent models rest on the IAU 2006 precession (in the Fukushima-Williams form), the IAU 2000A nutation with its 2006 adjustments, the IERS 2003 polar motion and the IAU 2000 Earth rotation angle. Almost all functions whose names end in <code>06</code> or <code>06a</code> use the same set of models, so they agree with each other. This is what you should use:</p>
+
+<ul>
+  <li><code>c2i06a(tt1, tt2)</code>: the CIO-based \(R_{NPB}\) matrix (GCRS to CIRS). Its transpose, from <code>tr</code>, goes back.</li>
+  <li><code>pnm06a(tt1, tt2)</code>: the equinox-based matrix (GCRS to true equator and equinox of date).</li>
+  <li><code>pfw06</code> + <code>nut06a</code> + <code>fw2m</code>: the same, but step by step. Or <code>fw2xy</code> + <code>s06a</code> + <code>c2ixys</code>, which gives you the chance to add the IERS corrections to \(X, Y\).</li>
+  <li><code>era00(ut11, ut12)</code> for the Earth rotation angle, or <code>gst06a(ut11, ut12, tt1, tt2)</code> for the sidereal time.</li>
+  <li><code>c2t06a(tt1, tt2, ut11, ut12, xp, yp)</code>: the <b>complete</b> GCRS to ITRS matrix in a single call. The lower-level <code>c2tcio</code> and <code>c2teqx</code> build the same matrix from the parts.</li>
+  <li><code>eo06a</code>: the equation of the origins; <code>eors</code>: the EO from a given matrix and \(s\).</li>
+  <li><code>pb06</code>: the old three precession angles \(\zeta, z, \theta\) that include the frame bias (for old software).</li>
+</ul>
+
+<h2>Example 1: the pieces, one by one</h2>
+
+<p>Before the long example, let us compute the main ingredients of the Earth's attitude for a single date: 2007 April 5 at 12:00:00 UTC. For the UT1 we need the difference UT1&minus;UTC from the IERS, which was &minus;0.072073685 s on that day. (The numbers used in this chapter are for illustration, but they are close to the real ones.)</p>
+
+<pre><code class="language-python">import numpy as np
+import erfa
+
+np.set_printoptions(precision=12, suppress=True)
+
+DAS2R, DMAS2R, DR2D = erfa.DAS2R, erfa.DMAS2R, erfa.DR2D
+
+# the date: UTC -&gt; TAI -&gt; TT, and UTC -&gt; UT1
+utc1, utc2 = erfa.dtf2d(&quot;UTC&quot;, 2007, 4, 5, 12, 0, 0.0)
+tai1, tai2 = erfa.utctai(utc1, utc2)
+tt1, tt2 = erfa.taitt(tai1, tai2)
+
+dut1 = -0.072073685                 # UT1-UTC in seconds (IERS)
+ut11, ut12 = erfa.utcut1(utc1, utc2, dut1)
+
+print(f&quot;TT  = {tt1} + {tt2:.15f}&quot;)
+print(f&quot;UT1 = {ut11} + {ut12:.15f}&quot;)</code></pre>
+<pre><code class="language-plaintext">TT  = 2454195.5 + 0.500754444444444
+UT1 = 2454195.5 + 0.499999165813831</code></pre>
+
+<p>Now the Fukushima-Williams precession angles (which already include frame bias), the nutation and the obliquity:</p>
+
+<pre><code class="language-python">gamb, phib, psib, epsa = erfa.pfw06(tt1, tt2)
+dpsi, deps = erfa.nut06a(tt1, tt2)
+print(f&quot;gamma_bar = {gamb / DAS2R:12.6f} arcsec&quot;)
+print(f&quot;phi_bar   = {phib / DAS2R:12.6f} arcsec&quot;)
+print(f&quot;psi_bar   = {psib / DAS2R:12.6f} arcsec&quot;)
+print(f&quot;eps_A     = {epsa / DAS2R:12.6f} arcsec&quot;)
+print(f&quot;nutation in longitude = {dpsi / DAS2R:.6f} arcsec&quot;)
+print(f&quot;nutation in obliquity = {deps / DAS2R:.6f} arcsec&quot;)
+print(f&quot;mean obliquity        = {erfa.obl06(tt1, tt2) * DR2D:.6f} deg&quot;)</code></pre>
+<pre><code class="language-plaintext">gamma_bar =     0.715857 arcsec
+phi_bar   = 84378.015524 arcsec
+psi_bar   =   365.661663 arcsec
+eps_A     = 84378.006566 arcsec
+nutation in longitude = 3.654375 arcsec
+nutation in obliquity = 9.284462 arcsec
+mean obliquity        = 23.438335 deg</code></pre>
+
+<p>The angle \(\bar\gamma\) is less than one arcsecond, and \(\bar\psi\) is the accumulated precession in longitude: 366 arcseconds, about 6 arcminutes, which is what we expect for about 7 years at 50 arcseconds per year. The angles \(\bar\phi\) and \(\epsilon_A\) are both very close to the obliquity of the ecliptic, 84378 arcseconds, which is 23.44&deg;. The nutation is at the level of a few arcseconds. Next, the Earth rotation angle, the sidereal times, and the equation of the origins:</p>
+
+<pre><code class="language-python">era  = erfa.era00(ut11, ut12)                   # depends on UT1 only
+gmst = erfa.gmst06(ut11, ut12, tt1, tt2)        # needs UT1 and TT
+gst  = erfa.gst06a(ut11, ut12, tt1, tt2)
+eo   = erfa.eo06a(tt1, tt2)
+
+print(f&quot;ERA  = {era * DR2D:.9f} deg = {era / 15 * DR2D:.9f} h&quot;)
+print(f&quot;GMST = {gmst * DR2D:.9f} deg&quot;)
+print(f&quot;GST  = {gst * DR2D:.9f} deg&quot;)
+print(f&quot;EO   = {eo / DAS2R:.6f} arcsec&quot;)
+print(f&quot;ERA - GST = {(era - gst) / DAS2R:.6f} arcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">ERA  = 13.318492966 deg = 0.887899531 h
+GMST = 13.411485802 deg
+GST  = 13.412416949 deg
+EO   = -338.126340 arcsec
+ERA - GST = -338.126340 arcsec</code></pre>
+
+<p>The last two lines show that \(EO = ERA - GST\), as we said. The EO is only about &minus;338 arcseconds, i.e. the equinox is about 5.6 arcminutes away from the CIO on this date.</p>
+
+<p>Finally, the matrix that rotates GCRS coordinates into CIRS coordinates and the CIP coordinates it contains:</p>
+
+<pre><code class="language-python">rc2i = erfa.c2i06a(tt1, tt2)
+x, y = erfa.bpn2xy(rc2i)
+s = erfa.s06(tt1, tt2, x, y)
+print(rc2i)
+print(f&quot;X = {x:.12f}  Y = {y:.12f}  s = {s / DAS2R:.6f} arcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">[[ 0.99999974634  -0.000000005139 -0.000712263882]
+ [-0.000000026476  0.999999999015 -0.000044386338]
+ [ 0.000712263881  0.000044386346  0.999999745355]]
+X = 0.000712263881  Y = 0.000044386346  s = -0.002200 arcsec</code></pre>
+
+<p>The matrix is very close to the identity (the diagonal is almost 1), as the Earth's axis has moved only a little since 2000. The third row is the unit vector of the CIP, which is \((X, Y, \sqrt{1-X^2-Y^2})\).</p>
+
+<h2>Example 2: from the celestial to the terrestrial frame, in five ways</h2>
+
+<p>Now the main example of the SOFA cookbook. The task is to calculate the complete matrix \(R_{GCRS\to ITRS}\) for the date above, with five different methods. The first is the classical, pre-2003 one; the others are the successive generations of the IAU models. We also need the Earth orientation parameters, which are measured and published by the IERS. All of these values are for illustration:</p>
+
+<pre><code class="language-python">xp = 0.0349282 * DAS2R              # polar motion (arcsec -&gt; rad)
+yp = 0.4833163 * DAS2R
+
+ddp80 = -55.0655 * DMAS2R           # corrections to the IAU 1980 nutation
+dde80 = -6.3580 * DMAS2R
+
+dx00 = 0.1725 * DMAS2R              # corrections to the CIP, IAU 2000A (mas -&gt; rad)
+dy00 = -0.2650 * DMAS2R
+
+dx06 = 0.1750 * DMAS2R              # corrections to the CIP, IAU 2006/2000A
+dy06 = -0.2259 * DMAS2R
+
+def diff_uas(a, b):
+    &quot;&quot;&quot;Size of the rotation between two matrices, in microarcseconds.&quot;&quot;&quot;
+    return np.linalg.norm(erfa.rm2v(erfa.rxr(a, erfa.tr(b)))) / DAS2R * 1e6</code></pre>
+
+<h3>Method 1: IAU 1976/1980/1982/1994 (equinox based)</h3>
+
+<p>This is how it was done before 2003. We build the precession matrix and the nutation matrix, multiply them, and use the Greenwich apparent sidereal time as the rotation angle. The old polar motion matrix of the IERS 1996 convention is just two small rotations.</p>
+
+<pre><code class="language-python">rp = erfa.pmat76(tt1, tt2)                      # IAU 1976 precession, J2000.0 to date
+dp80, de80 = erfa.nut80(tt1, tt2)               # IAU 1980 nutation
+dpsi, deps = dp80 + ddp80, de80 + dde80         # add the observed corrections
+epsa = erfa.obl80(tt1, tt2)                     # mean obliquity
+rn = erfa.numat(epsa, dpsi, deps)               # nutation matrix
+rnpb = erfa.rxr(rn, rp)                         # N x P
+
+ee = erfa.eqeq94(tt1, tt2) + ddp80 * np.cos(epsa)           # equation of the equinoxes
+gst = erfa.anp(erfa.gmst82(ut11, ut12) + ee)                # apparent sidereal time
+
+rc2ti = erfa.rz(gst, rnpb)                      # celestial -&gt; terrestrial intermediate
+
+rpom = erfa.ir()                                # polar motion (IERS 1996)
+rpom = erfa.rx(-yp, rpom)
+rpom = erfa.ry(-xp, rpom)
+rc2it_1 = erfa.rxr(rpom, rc2ti)
+
+print(&quot;GST =&quot;, gst * DR2D, &quot;degrees&quot;)
+print(rc2it_1)</code></pre>
+<pre><code class="language-plaintext">GST = 13.412402380740755 degrees
+[[ 0.973104317713  0.230363826175 -0.000703163477]
+ [-0.230363800392  0.973104570648  0.000118545117]
+ [ 0.0007115601    0.000046626646  0.999999745754]]</code></pre>
+
+<h3>Method 2: IAU 2000A, CIO based</h3>
+
+<p>Since 2003 the IAU 2000A model is the standard. We take the CIP coordinates \(X, Y\) and \(s\) from <code>xys00a</code>, add the observed corrections, build the GCRS-to-CIRS matrix with <code>c2ixys</code>, then rotate by the Earth rotation angle. For the polar motion, the new convention needs the TIO locator \(s'\).</p>
+
+<pre><code class="language-python">x, y, s = erfa.xys00a(tt1, tt2)
+x, y = x + dx00, y + dy00                       # add corrections to the CIP
+
+rc2i = erfa.c2ixys(x, y, s)                     # GCRS -&gt; CIRS
+era = erfa.era00(ut11, ut12)                    # Earth rotation angle
+rc2ti = erfa.rz(era, rc2i)                      # CIRS -&gt; TIRS
+
+sp = erfa.sp00(tt1, tt2)                        # TIO locator
+rpom = erfa.pom00(xp, yp, sp)                   # polar motion matrix
+rc2it_2 = erfa.rxr(rpom, rc2ti)
+
+print(f&quot;X = {x:.15f}, Y = {y:.15f}, s = {s / DAS2R:.9f} arcsec&quot;)
+print(&quot;ERA =&quot;, era * DR2D, &quot;degrees&quot;)
+print(rc2it_2)
+print(f&quot;difference with method 1: {diff_uas(rc2it_1, rc2it_2):.2f} microarcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">X = 0.000712264729708, Y = 0.000044385250265, s = -0.002200496 arcsec
+ERA = 13.318492966096413 degrees
+[[ 0.973104317698  0.230363826239 -0.000703163482]
+ [-0.230363800456  0.973104570633  0.000118545367]
+ [ 0.000711560163  0.000046626404  0.999999745754]]
+difference with method 1: 53.33 microarcsec</code></pre>
+
+<p>The two matrices differ by only 53 microarcseconds: an equivalent result with a very different route.</p>
+
+<h3>Method 3: IAU 2000A, equinox based</h3>
+
+<p>Equinox-based applications can use the new nutation too. But now the corrections are given as \((dX, dY)\) for the CIP, so we must convert them into corrections of nutation \((d\Delta\psi, d\Delta\epsilon)\) first. Also, it is necessary to choose the sidereal time and equation of the equinoxes functions that match the IAU 2000 precession: <code>gmst00</code> and <code>ee00</code>.</p>
+
+<pre><code class="language-python">dp00, de00 = erfa.nut00a(tt1, tt2)
+epsa, rb, rp, rpb, rn, rnpb = erfa.pn00(tt1, tt2, dp00, de00)
+
+# convert the CIP corrections (dX, dY) into nutation corrections
+v1 = np.array([dx00, dy00, 0.0])
+v2 = erfa.rxp(rnpb, v1)
+ddp00 = v2[0] / np.sin(epsa)
+dde00 = v2[1]
+
+dpsi, deps = dp00 + ddp00, de00 + dde00
+rn = erfa.numat(epsa, dpsi, deps)
+rnpb = erfa.rxr(rn, rpb)
+
+gst = erfa.anp(erfa.gmst00(ut11, ut12, tt1, tt2) + erfa.ee00(tt1, tt2, epsa, dpsi))
+rc2ti = erfa.rz(gst, rnpb)
+
+rpom = erfa.pom00(xp, yp, erfa.sp00(tt1, tt2))
+rc2it_3 = erfa.rxr(rpom, rc2ti)
+
+print(&quot;GST =&quot;, gst * DR2D, &quot;degrees&quot;)
+print(rc2it_3)
+print(f&quot;difference with method 2: {diff_uas(rc2it_3, rc2it_2):.2f} microarcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">GST = 13.412417084674258 degrees
+[[ 0.973104317698  0.230363826239 -0.000703163482]
+ [-0.230363800456  0.973104570633  0.000118545367]
+ [ 0.000711560163  0.000046626404  0.999999745754]]
+difference with method 2: 0.10 microarcsec</code></pre>
+
+<p>The two approaches (CIO and equinox) give the same matrix to 0.1 microarcsecond, as they should.</p>
+
+<h3>Method 4: IAU 2006/2000A, CIO based</h3>
+
+<p>From 2009 the IAU 2006 precession is used. For the CIO-based method, the only change is to call <code>xys06a</code> instead of <code>xys00a</code>:</p>
+
+<pre><code class="language-python">x, y, s = erfa.xys06a(tt1, tt2)
+x, y = x + dx06, y + dy06
+
+rc2i = erfa.c2ixys(x, y, s)
+rc2ti = erfa.rz(erfa.era00(ut11, ut12), rc2i)
+rc2it_4 = erfa.rxr(erfa.pom00(xp, yp, erfa.sp00(tt1, tt2)), rc2ti)
+
+print(f&quot;X = {x:.15f}, Y = {y:.15f}, s = {s / DAS2R:.9f} arcsec&quot;)
+print(rc2it_4)
+print(f&quot;difference with method 2: {diff_uas(rc2it_4, rc2it_2):.2f} microarcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">X = 0.000712264729599, Y = 0.000044385250426, s = -0.002200475 arcsec
+[[ 0.973104317698  0.230363826239 -0.000703163482]
+ [-0.230363800456  0.973104570633  0.000118545367]
+ [ 0.000711560163  0.000046626404  0.999999745754]]
+difference with method 2: 0.05 microarcsec</code></pre>
+
+<h3>Method 5: IAU 2006/2000A, CIO based, from the X,Y series</h3>
+
+<p>SOFA has a second way to get the CIP for the 2006/2000A model: a direct series for \(X\) and \(Y\) (<code>xy06</code>). Then the CIO locator \(s\) is computed from them with <code>s06</code>. The rest is the same. This formulation agrees with the previous one to about 1 microarcsecond, but it is not identical to it, so don't mix them in a single application.</p>
+
+<pre><code class="language-python">x, y = erfa.xy06(tt1, tt2)
+s = erfa.s06(tt1, tt2, x, y)
+x, y = x + dx06, y + dy06
+
+rc2i = erfa.c2ixys(x, y, s)
+rc2ti = erfa.rz(erfa.era00(ut11, ut12), rc2i)
+rc2it_5 = erfa.rxr(erfa.pom00(xp, yp, erfa.sp00(tt1, tt2)), rc2ti)
+
+print(rc2it_5)
+print(f&quot;difference with method 2: {diff_uas(rc2it_5, rc2it_2):.2f} microarcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">[[ 0.973104317698  0.230363826239 -0.000703163482]
+ [-0.230363800456  0.973104570633  0.000118545368]
+ [ 0.000711560163  0.000046626402  0.999999745754]]
+difference with method 2: 0.29 microarcsec</code></pre>
+
+<h3>The shortcut</h3>
+
+<p>If you do not need to apply IERS corrections to the CIP, there is a single function that does methods 4 and 5 for you. Its result differs from the one above only by the corrections \(dX, dY\) that we added (they amount to about 0.3 mas):</p>
+
+<pre><code class="language-python">rc2it_6 = erfa.c2t06a(tt1, tt2, ut11, ut12, xp, yp)
+print(rc2it_6)
+print(f&quot;difference with method 4: {diff_uas(rc2it_6, rc2it_4):.0f} microarcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">[[ 0.973104317698  0.230363826239 -0.000703162909]
+ [-0.230363800457  0.973104570633  0.000118544105]
+ [ 0.000711559314  0.000046627499  0.999999745755]]
+difference with method 4: 286 microarcsec</code></pre>
+
+<h2>Example 3: what is above my head?</h2>
+
+<p>The matrix \(R_{GCRS\to ITRS}\) is a rotation. Applied to the direction of a star, it gives the direction as seen in the Earth-fixed frame. A direction in the ITRS has a longitude and a latitude on the Earth: that is the point of the Earth's surface that has this star right above it, at the zenith.</p>
+
+<p>Let us do this for Sirius (ICRS coordinates 06h 45m 08.917s, &minus;16&deg; 42' 58.02") on the date of the example. We ignore the proper motion, the parallax and the aberration, which would change the answer by only some arcseconds, and use the matrix of method 4:</p>
+
+<pre><code class="language-python">ra  = erfa.tf2a(&quot;+&quot;, 6, 45, 8.917)
+dec = erfa.af2a(&quot;-&quot;, 16, 42, 58.02)
+
+v_gcrs = erfa.s2c(ra, dec)                      # unit vector in the GCRS
+v_itrs = erfa.rxp(rc2it_4, v_gcrs)              # the same direction in the ITRS
+
+lon, lat = erfa.c2s(v_itrs)
+lon = erfa.anpm(lon)                            # east longitude, -180..+180 degrees
+
+print(f&quot;Sirius is at the zenith at longitude {lon * DR2D:.3f} deg (east), &quot;
+      f&quot;latitude {lat * DR2D:.3f} deg&quot;)</code></pre>
+<pre><code class="language-plaintext">Sirius is at the zenith at longitude 87.956 deg (east), latitude -16.721 deg</code></pre>
+
+<p>At 12:00 UTC on that day, Sirius is straight overhead for an observer in the Indian Ocean, at about 88&deg; east and 16.7&deg; south. Because the Earth turns, this point moves west by 15&deg; each hour. And the same matrix, transposed, brings you back from the ground to the sky: <code>erfa.trxp(rc2it_4, v_itrs)</code>.</p>
+
+<h2>Example 4: the pole in the far future</h2>
+
+<p>The standard precession models are very good for a few centuries around the present. For much longer times, the polynomial models fail. SOFA includes a special <em>long-term precession</em> model (Vondr&aacute;k et al. 2011), valid for about 200,000 years on either side of the year 2000. With the function <code>ltpequ</code> we can ask: where will the Earth's rotation axis point in 12,000 years?</p>
+
+<pre><code class="language-python">for epoch in (2000.0, 14000.0):
+    pole = erfa.ltpequ(epoch)                   # unit vector of the equator pole, J2000.0 frame
+    ra_p, dec_p = erfa.c2s(pole)
+    print(f&quot;year {epoch:7.1f}: RA = {np.degrees(ra_p) / 15 % 24:6.3f} h, Dec = {np.degrees(dec_p):+7.3f} deg&quot;)
+
+# bright star Vega, ICRS
+ra_v  = erfa.tf2a(&quot;+&quot;, 18, 36, 56.3)
+dec_v = erfa.af2a(&quot;+&quot;, 38, 47, 1.3)
+ra_p, dec_p = erfa.c2s(erfa.ltpequ(14000.0))
+print(f&quot;distance from Vega: {erfa.seps(ra_p, dec_p, ra_v, dec_v) * DR2D:.1f} deg&quot;)</code></pre>
+<pre><code class="language-plaintext">year  2000.0: RA =  6.000 h, Dec = +90.000 deg
+year 14000.0: RA = 18.399 h, Dec = +45.140 deg
+distance from Vega: 6.8 deg</code></pre>
+
+<p>In the year 2000 the axis points almost exactly to the north celestial pole (declination +90&deg;, near Polaris). In the year 14,000 the pole of the equator will be about 45&deg; away from the present pole (its declination in the current frame will be +45&deg;), pointing to a place only about seven degrees from the bright star Vega. Vega will be the pole star of that time. The other long-term functions give the precession matrix (<code>ltp</code>, <code>ltpb</code>) and ecliptic quantities (<code>ltpecl</code>, <code>ltecm</code>, <code>lteceq</code>, <code>lteqec</code>).</p>
+
+<h2>Summary</h2>
+
+<ul>
+  <li>The orientation of the Earth is described by four rotations: frame bias, precession-nutation, Earth rotation and polar motion.</li>
+  <li>The modern way uses the CIP (\(X, Y\)), the CIO locator \(s\) and the Earth rotation angle. The old way uses the equinox and the sidereal time. The equation of the origins connects them.</li>
+  <li>For new programs use the IAU 2006/2000A functions: <code>c2i06a</code>, <code>era00</code>, <code>eo06a</code>, or the complete <code>c2t06a</code>.</li>
+  <li>Earth orientation parameters (UT1&minus;UTC, polar motion, CIP corrections) come from the IERS; they cannot be predicted by a model.</li>
+  <li>All the different approaches agree to within a fraction of a milliarcsecond.</li>
+</ul>
+
+
+</body>
+</html>

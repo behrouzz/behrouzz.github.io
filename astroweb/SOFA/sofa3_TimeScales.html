@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>SOFA - Time Scale and Calendar Tools</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>SOFA: Time Scale and Calendar Tools</h1>
+
+<p>Time is the first thing you need in almost every astronomical calculation, and it is also one of the easiest things to get wrong. Astronomers use several different <em>time scales</em>, and the difference between them can be tens of seconds. Using the wrong one can move a planet by many arcseconds in the sky. This chapter explains the time scales supported by SOFA and shows how to convert between them with <code>pyerfa</code>. (The <code>Time</code> class of <a href="../astropy3_Time.html">astropy</a> does the same job and uses these same functions behind the scenes. Here we work with them directly, so that you can see what happens at each step.)</p>
+
+<p>The SOFA time and date functions can be grouped like this:</p>
+
+<ul>
+  <li><b>Calendar and Julian date:</b> <code>cal2jd</code>, <code>jd2cal</code>, <code>jdcalf</code>, <code>dtf2d</code>, <code>d2dtf</code></li>
+  <li><b>Hours, minutes, seconds:</b> <code>tf2d</code>, <code>d2tf</code></li>
+  <li><b>Epochs:</b> <code>epb</code>, <code>epb2jd</code>, <code>epj</code>, <code>epj2jd</code></li>
+  <li><b>Time scale conversions:</b> <code>utctai</code>, <code>taiutc</code>, <code>utcut1</code>, <code>ut1utc</code>, <code>taiut1</code>, <code>ut1tai</code>, <code>ttut1</code>, <code>ut1tt</code>, <code>taitt</code>, <code>tttai</code>, <code>tttcg</code>, <code>tcgtt</code>, <code>tttdb</code>, <code>tdbtt</code>, <code>tdbtcb</code>, <code>tcbtdb</code></li>
+  <li><b>Supporting functions:</b> <code>dat</code> (leap seconds) and <code>dtdb</code> (the difference TDB&minus;TT)</li>
+</ul>
+
+<h2>A first example: UTC to TT</h2>
+
+<p>The most common job is to take a time written in one scale and express it in another. It always takes three steps:</p>
+
+<ol>
+  <li>Encode the date and time into SOFA's internal format with <code>dtf2d</code>.</li>
+  <li>Call the conversion functions that lead from the first scale to the second one.</li>
+  <li>Decode the result back into a readable date with <code>d2dtf</code>.</li>
+</ol>
+
+<p>Let us convert 2010 July 24, 11:18:07.318 UTC to Terrestrial Time (TT). There is no direct UTC&rarr;TT function: we go through TAI.</p>
+
+<pre><code class="language-python">import numpy as np
+import erfa
+
+# step 1: encode (the scale name tells SOFA how to treat leap seconds)
+utc1, utc2 = erfa.dtf2d(&quot;UTC&quot;, 2010, 7, 24, 11, 18, 7.318)
+
+# step 2: UTC -&gt; TAI -&gt; TT
+tai1, tai2 = erfa.utctai(utc1, utc2)
+tt1, tt2 = erfa.taitt(tai1, tai2)
+
+# step 3: decode, rounding to 3 decimals of a second
+iy, im, id, hmsf = erfa.d2dtf(&quot;TT&quot;, 3, tt1, tt2)
+print(f&quot;{iy}/{im:02d}/{id:02d} {hmsf[&#x27;h&#x27;]}:{hmsf[&#x27;m&#x27;]:02d}:{hmsf[&#x27;s&#x27;]:02d}.{hmsf[&#x27;f&#x27;]:03d}&quot;)</code></pre>
+<pre><code class="language-plaintext">2010/07/24 11:19:13.502</code></pre>
+
+<p>The TT is 1 minute and 6.184 seconds ahead of UTC on that date: 34 seconds of leap seconds (the difference TAI&minus;UTC) plus the fixed 32.184 seconds between TT and TAI.</p>
+
+<p>Since we will format many times in this chapter, let us define a small helper function. It converts a two-part Julian date into text, for any time scale:</p>
+
+<pre><code class="language-python">def show(scale, d1, d2, ndp=3):
+    &quot;&quot;&quot;Format a two-part Julian date as &#x27;YYYY/MM/DD hh:mm:ss.fff&#x27;.&quot;&quot;&quot;
+    y, m, d, t = erfa.d2dtf(scale, ndp, d1, d2)
+    return f&quot;{y:04d}/{m:02d}/{d:02d} {t[&#x27;h&#x27;]:02d}:{t[&#x27;m&#x27;]:02d}:{t[&#x27;s&#x27;]:02d}.{t[&#x27;f&#x27;]:0{ndp}d}&quot;
+
+print(show(&quot;TT&quot;, tt1, tt2))</code></pre>
+<pre><code class="language-plaintext">2010/07/24 11:19:13.502</code></pre>
+
+<p><b>Important:</b> SOFA recognizes UTC only when the scale name is written in capital letters, <code>"UTC"</code>. Any other name (even <code>"utc"</code>) is handled like a smooth time scale without leap seconds, which gives wrong results near a leap second. To be safe, write all scale names in capitals.</p>
+
+<h2>Hours, minutes and seconds</h2>
+
+<p>A time of day can be written as <code>hh:mm:ss</code> or as a fraction of a day. The function <code>tf2d</code> converts the first form to the second and <code>d2tf</code> does the opposite. Here we convert 23:05:11.630799 to a fraction of a day, subtract six hours (a quarter of a day), and write the result back in hours, minutes and seconds with a resolution of one millisecond:</p>
+
+<pre><code class="language-python">f = erfa.tf2d(&quot;+&quot;, 23, 5, 11.630799)
+print(f&quot;{f:.12f}&quot;)
+
+f = f - 0.25            # six hours earlier
+sign, t = erfa.d2tf(3, f)
+print(f&quot;{t[&#x27;h&#x27;]:02d}:{t[&#x27;m&#x27;]:02d}:{t[&#x27;s&#x27;]:02d}.{t[&#x27;f&#x27;]:03d}&quot;)</code></pre>
+<pre><code class="language-plaintext">0.961940171285
+17:05:11.631</code></pre>
+
+<h2>Calendar dates and Julian dates</h2>
+
+<p>The familiar <em>Gregorian calendar</em> is built to follow the tropical year (the cycle of the seasons), which lasts about 365.2422 days. It adds a leap day every four years, except in century years that are not divisible by 400. So 2000 was a leap year, but 2100 will not be. Its predecessor, the <em>Julian calendar</em>, simply added a leap day every four years, giving an average year of 365.25 days. Astronomers still use this value: a <em>Julian year</em> has exactly 365.25 days and a <em>Julian century</em> has 36525 days.</p>
+
+<p>A calendar date is inconvenient for calculations, because months have different lengths. What we want is a continuous count of days. The <em>Julian Date</em> (JD) is exactly that: the number of days (with a decimal fraction) since noon on 1 January 4713 BC. For example, JD 2449443.5 is midnight at the start of 1994 April 1. Because JD numbers are long, people often use the <em>Modified Julian Date</em>:</p>
+
+<p>$$MJD = JD - 2400000.5$$</p>
+
+<p>so that 1994 April 1 begins at MJD 49443.0.</p>
+
+<h3>Why SOFA uses two numbers</h3>
+
+<p>A double-precision number has about 16 significant digits. A JD such as 2459293.9008217594 already uses 7 digits for the day count, so only 9 are left for the fraction of the day, which is about 0.1 milliseconds. To keep full precision, SOFA always stores a Julian Date as <b>two numbers whose sum is the JD</b>. You choose how to split it. If precision is not critical, you can put everything in one number and set the other to zero. A good split is <code>2400000.5</code> and the MJD, because then the second number is small and keeps all its precision. The SOFA functions are careful never to add the two parts together early.</p>
+
+<p>The function <code>cal2jd</code> gives the (two-part) JD of the start of a Gregorian date, <code>jd2cal</code> breaks a JD into year, month, day and a fraction of the day, and <code>jdcalf</code> does the same but rounds to a chosen number of decimals and returns the fraction as an integer, ready to print. Let us try a date and time that is close to the end of a month, which is a good test for rounding:</p>
+
+<pre><code class="language-python">iy, im, id = 2008, 2, 29
+ihour, imin, sec = 23, 59, 59.9
+print(f&quot;{iy}/{im:02d}/{id:02d} {ihour}:{imin}:{sec}&quot;)
+
+# two-part JD: the date at midnight, plus the fraction of the day
+d1, d2 = erfa.cal2jd(iy, im, id)
+d2 += erfa.tf2d(&quot;+&quot;, ihour, imin, sec)
+print(f&quot;{d1:.1f} + {d2:.6f} = {d1 + d2:.6f}&quot;)
+
+# back to a calendar date plus a fraction of the day
+y, m, d, fd = erfa.jd2cal(d1, d2)
+print(f&quot;{y}/{m:02d}/{d + fd:09.6f}&quot;)
+
+# rounded to 0.001 day
+y, m, d, f = erfa.jdcalf(3, d1, d2)
+print(f&quot;{y}/{m:02d}/{d:02d}.{f:03d}&quot;)</code></pre>
+<pre><code class="language-plaintext">2008/02/29 23:59:59.9
+2400000.5 + 54525.999999 = 2454526.499999
+2008/02/29.999999
+2008/03/01.000</code></pre>
+
+<p>The last line shows the value of <code>jdcalf</code>: rounding 29.999999 to three decimals correctly moves the date to March 1st.</p>
+
+<h2>Besselian and Julian epochs</h2>
+
+<p>Sometimes a date is written as a fractional year such as "2009.93". This is called an <em>epoch</em>. There are two kinds. The old <em>Besselian epoch</em> uses the tropical year as its unit and was used for catalogs before 1984, for example B1950.0. The modern <em>Julian epoch</em> uses the Julian year of exactly 365.25 days. Julian epoch J2000.0 is defined as 2000 January 1.5, which is JD 2451545.0 (MJD 51544.5). Without a letter, an epoch before 1984.0 is understood to be Besselian and later epochs are Julian. The four functions <code>epb</code>, <code>epb2jd</code>, <code>epj</code> and <code>epj2jd</code> convert between JD and epochs:</p>
+
+<pre><code class="language-python">jd = 2457073.05631
+print(f&quot;JD            {jd:.5f}&quot;)
+
+eb = erfa.epb(0.0, jd)                  # JD (two parts) -&gt; Besselian epoch
+print(f&quot;Besselian     B{eb:.10f}&quot;)
+b1, b2 = erfa.epb2jd(eb)                # and back
+print(f&quot;back to JD    {b1 + b2:.9f}&quot;)
+
+ej = erfa.epj(0.0, jd)                  # JD -&gt; Julian epoch
+print(f&quot;Julian        J{ej:.10f}&quot;)
+j1, j2 = erfa.epj2jd(ej)
+print(f&quot;back to JD    {j1 + j2:.9f}&quot;)</code></pre>
+<pre><code class="language-plaintext">JD            2457073.05631
+Besselian     B2015.1365941021
+back to JD    2457073.056310000
+Julian        J2015.1349933196
+back to JD    2457073.056310000</code></pre>
+
+<h2>The time scales</h2>
+
+<p>Why do astronomers need so many time scales? There are three reasons. First, they must still study the phenomena behind old time scales, mainly the rotation of the Earth and the motion of the planets. Second, every time a new scale was introduced it was made continuous with the old one, so the old offsets are still there. Third, the place of the clock matters: a clock on the Earth's surface, one at the Earth's centre and one far from the Sun do not run at the same rate, according to general relativity.</p>
+
+<p>SOFA supports seven time scales:</p>
+
+<table border="1" cellpadding="6" style="border-collapse:collapse">
+  <tr><th>Scale</th><th>Name</th><th>What it is used for</th></tr>
+  <tr><td>TAI</td><td>International Atomic Time</td><td>The basic time standard. It counts SI seconds continuously from a network of atomic clocks. It has no leap seconds.</td></tr>
+  <tr><td>UTC</td><td>Coordinated Universal Time</td><td>Civil time. It runs at the same rate as TAI but is kept close to the Earth's rotation by inserting leap seconds. Good for record keeping, almost never for calculation.</td></tr>
+  <tr><td>UT1</td><td>Universal Time</td><td>Measures the rotation angle of the Earth. Needed whenever you point a telescope or compute where a star is in the local sky.</td></tr>
+  <tr><td>TT</td><td>Terrestrial Time</td><td>A smooth time for the Earth's surface (the successor of Ephemeris Time). Used to look up planet positions and in precession and nutation.</td></tr>
+  <tr><td>TCG</td><td>Geocentric Coordinate Time</td><td>Coordinate time for calculations centered on the Earth (theoretical work).</td></tr>
+  <tr><td>TCB</td><td>Barycentric Coordinate Time</td><td>Coordinate time for calculations in the whole solar system (theoretical work).</td></tr>
+  <tr><td>TDB</td><td>Barycentric Dynamical Time</td><td>A rescaled version of TCB that stays close to TT. Used for precise ephemerides and pulsar timing.</td></tr>
+</table>
+
+<p>Some names you may meet are not in this list. <em>GMT</em> is obsolete (it can mean UTC or UT1), <em>ET</em> and <em>TDT</em> are old names that were replaced by TT or TDB, and <em>GPS time</em> is simply TAI minus 19 seconds. <em>Sidereal time</em> is an angle rather than a time, and we will meet it in the next chapter.</p>
+
+<p><b>A very common mistake</b> is to think that there is only one precise time, UTC, which fits everything. In fact telescope pointing needs UT1, the position of a planet needs TT or TDB, and UTC is almost never the right choice for a calculation.</p>
+
+<h3>TAI: atomic time</h3>
+
+<p>The SI second is defined by the radiation of the caesium 133 atom (9,192,631,770 periods). It was chosen to match the length of the solar day in the 19th century. TAI is produced by averaging more than 400 atomic clocks all over the world. It is continuous: it never jumps. This is why it is the best choice for any computation that must work across a leap second, such as the interval between two events.</p>
+
+<h3>UT1 and UTC: solar time</h3>
+
+<p>UT1 is the modern version of "mean solar time". It is really an <em>angle</em> (the rotation angle of the Earth), not a time in the physics sense. The Earth's rotation is irregular and is slowing down, so a UT1 second is not exactly an SI second. UTC is a compromise: it ticks like TAI but is adjusted from time to time to keep within 0.9 seconds of UT1. Since 1972 the adjustment is done by inserting a whole second, called a <em>leap second</em>, usually at the end of June or December.</p>
+
+<p>The difference <b>UT1&minus;UTC</b> cannot be predicted well. It comes from observations (mainly VLBI) and is published by the IERS; it changes by 1 to 2 milliseconds per day. To get UT1 from UTC you must look the value up and add it. (See also the page about <a href="../EOP.html">Earth Orientation Parameters</a>.)</p>
+
+<h3>Leap seconds</h3>
+
+<p>Look at what happened at the end of 2008. The UTC clock showed a 61st second, 23:59:60, and TAI went on without any problem:</p>
+
+<pre><code class="language-python">leap = [(2008, 12, 31, 23, 59, 58.0),
+        (2008, 12, 31, 23, 59, 59.0),
+        (2008, 12, 31, 23, 59, 60.0),     # the leap second
+        (2009,  1,  1,  0,  0,  0.0),
+        (2009,  1,  1,  0,  0,  1.0)]
+
+for t in leap:
+    u1, u2 = erfa.dtf2d(&quot;UTC&quot;, *t)
+    a1, a2 = erfa.utctai(u1, u2)
+    print(&quot;UTC&quot;, show(&quot;UTC&quot;, u1, u2, 0), &quot;  TAI&quot;, show(&quot;TAI&quot;, a1, a2, 0))</code></pre>
+<pre><code class="language-plaintext">UTC 2008/12/31 23:59:58.0   TAI 2009/01/01 00:00:31.0
+UTC 2008/12/31 23:59:59.0   TAI 2009/01/01 00:00:32.0
+UTC 2008/12/31 23:59:60.0   TAI 2009/01/01 00:00:33.0
+UTC 2009/01/01 00:00:00.0   TAI 2009/01/01 00:00:34.0
+UTC 2009/01/01 00:00:01.0   TAI 2009/01/01 00:00:35.0</code></pre>
+
+<p>The UTC column repeats a minute with 61 seconds, while TAI counts 31, 32, 33, 34, 35 without a break. Before the leap second TAI&minus;UTC was 33 s and after it, 34 s.</p>
+
+<p>Because of leap seconds, <b>UTC must never be stored as an ordinary Julian date</b>. On the day with the leap second, the same JD range would belong to two different seconds, and the difference between two JDs would no longer be the real time interval. SOFA solves this by a trick: for UTC, <code>dtf2d</code> and <code>d2dtf</code> treat a day that ends with a leap second as 86401 seconds long. The pair of numbers you get for UTC is therefore <em>not</em> a real JD. Look:</p>
+
+<pre><code class="language-python"># the leap second at the end of 1994 June 30, and the first second of July 1
+for t in [(1994, 6, 30, 23, 59, 60.0), (1994, 7, 1, 0, 0, 0.0)]:
+    d1, d2 = erfa.dtf2d(&quot;UTC&quot;, *t)
+    print(f&quot;{d1:.1f} + {d2:.8f}&quot;)</code></pre>
+<pre><code class="language-plaintext">2449533.5 + 0.99998843
+2449534.5 + 0.00000000</code></pre>
+
+<p>The fraction of the leap second is 86400/86401, so they are different numbers, as they should be. The rule is: always use <code>dtf2d</code> and <code>d2dtf</code> to encode and decode UTC, and do not use these numbers for anything else.</p>
+
+<h3>TT and the "Delta T"</h3>
+
+<p>Terrestrial Time is tied to TAI by a fixed offset:</p>
+
+<p>$$TT = TAI + 32.184\ \mathrm{s}$$</p>
+
+<p>The strange number 32.184 s preserves continuity with the old Ephemeris Time. To get TT from UTC you need the leap seconds too:</p>
+
+<p>$$TT - UTC = 32.184\ \mathrm{s} + (TAI - UTC)$$</p>
+
+<p>The difference between TT and UT1 is called \(\Delta T\):</p>
+
+<p>$$\Delta T = TT - UT1 = 32.184\ \mathrm{s} + (TAI - UTC) - (UT1 - UTC)$$</p>
+
+<p>It measures how far the Earth's rotation is behind an ideal clock. It is large for ancient dates (the Earth was spinning faster) and it is needed to interpret historical eclipse observations. SOFA does not include a model for the past, but it can convert between UT1 and TT if you give it a value of \(\Delta T\).</p>
+
+<h3>TCG, TCB and TDB</h3>
+
+<p>TCG and TCB are <em>coordinate times</em> that come from general relativity. TCG is the time coordinate of the Geocentric Celestial Reference System, and TCB is the time coordinate of the Barycentric one. A clock at the Earth's surface runs slower than a clock far from the Earth's gravity and motion, so TCG runs faster than TT by a tiny constant factor:</p>
+
+<p>$$TCG = TT + L_G\,(JD_{TT} - 2443144.5003725),\qquad L_G = 6.969290134\times10^{-10}$$</p>
+
+<p>This amounts to about 2.2 seconds per century. TCB runs even faster, because it also ignores the gravity and the orbital speed of the Earth around the Sun: it gains on TT by nearly half a second per year.</p>
+
+<p>TDB is a TCB that has been linearly rescaled to stop its drift, so that it stays within about 2 ms of TT forever. The remaining difference TDB&minus;TT is a small, almost periodic term. Its main part is a yearly oscillation of amplitude 1.7 ms, caused by the Earth's orbit. For many applications we can ignore it and use TT instead of TDB. For millisecond pulsar timing, we cannot.</p>
+
+<p><b>Warning:</b> when you need a planet position from a solar system ephemeris, use TT (or TDB), not UTC. With UTC the time is wrong by more than a minute, and the planet is misplaced accordingly.</p>
+
+<h2>The conversion functions</h2>
+
+<p>Every SOFA function links two <em>neighbouring</em> time scales. To go from one scale to a far one, you chain the functions. The following table lists all sixteen. Some conversions need an extra number that SOFA cannot know by itself:</p>
+
+<table border="1" cellpadding="6" style="border-collapse:collapse">
+  <tr><th>From &rarr; To</th><th>Function</th><th>Extra input</th></tr>
+  <tr><td>UTC &rarr; TAI</td><td><code>utctai(utc1, utc2)</code></td><td>(none; uses leap seconds)</td></tr>
+  <tr><td>TAI &rarr; UTC</td><td><code>taiutc(tai1, tai2)</code></td><td>(none)</td></tr>
+  <tr><td>UTC &rarr; UT1</td><td><code>utcut1(utc1, utc2, dut1)</code></td><td><code>dut1</code> = UT1&minus;UTC in seconds, from IERS</td></tr>
+  <tr><td>UT1 &rarr; UTC</td><td><code>ut1utc(ut11, ut12, dut1)</code></td><td><code>dut1</code></td></tr>
+  <tr><td>TAI &rarr; UT1</td><td><code>taiut1(tai1, tai2, dta)</code></td><td><code>dta</code> = UT1&minus;TAI in seconds</td></tr>
+  <tr><td>UT1 &rarr; TAI</td><td><code>ut1tai(ut11, ut12, dta)</code></td><td><code>dta</code></td></tr>
+  <tr><td>TT &rarr; UT1</td><td><code>ttut1(tt1, tt2, dt)</code></td><td><code>dt</code> = TT&minus;UT1 (&Delta;T) in seconds</td></tr>
+  <tr><td>UT1 &rarr; TT</td><td><code>ut1tt(ut11, ut12, dt)</code></td><td><code>dt</code></td></tr>
+  <tr><td>TAI &rarr; TT</td><td><code>taitt(tai1, tai2)</code></td><td>(none; fixed 32.184 s)</td></tr>
+  <tr><td>TT &rarr; TAI</td><td><code>tttai(tt1, tt2)</code></td><td>(none)</td></tr>
+  <tr><td>TT &rarr; TCG</td><td><code>tttcg(tt1, tt2)</code></td><td>(none; linear)</td></tr>
+  <tr><td>TCG &rarr; TT</td><td><code>tcgtt(tcg1, tcg2)</code></td><td>(none)</td></tr>
+  <tr><td>TT &rarr; TDB</td><td><code>tttdb(tt1, tt2, dtr)</code></td><td><code>dtr</code> = TDB&minus;TT in seconds (use <code>dtdb</code>)</td></tr>
+  <tr><td>TDB &rarr; TT</td><td><code>tdbtt(tdb1, tdb2, dtr)</code></td><td><code>dtr</code></td></tr>
+  <tr><td>TDB &rarr; TCB</td><td><code>tdbtcb(tdb1, tdb2)</code></td><td>(none; linear)</td></tr>
+  <tr><td>TCB &rarr; TDB</td><td><code>tcbtdb(tcb1, tcb2)</code></td><td>(none)</td></tr>
+</table>
+
+<p>The scales form a chain like this, and the route from one to another follows the arrows (for example UTC &rarr; TAI &rarr; TT &rarr; TDB):</p>
+
+<pre>
+UT1 &lt;--&gt; UTC &lt;--&gt; TAI &lt;--&gt; TT &lt;--&gt; TCG
+ ^                     ^
+ |                     +--&gt; TDB &lt;--&gt; TCB
+ +---------------------+  (UT1 also connects directly to TAI and TT)
+</pre>
+
+<p>Why is there no single function that converts any time scale to any other? Because the extra quantities (UT1&minus;UTC, &Delta;T, TDB&minus;TT) come from observations or models, and a general function would force you to supply all of them every time, even when they are not needed. By chaining the small functions you supply only what the route needs, and you also get all the intermediate results.</p>
+
+<h3>Example: TAI to UTC in the middle of a leap second</h3>
+
+<p>The next example takes 33.7 s after the start of 2009 January 1 in TAI and converts it to UTC. That moment is 33.7 seconds after midnight in TAI, and since TAI is 33 seconds ahead of UTC until the leap second ends, the answer falls inside the leap second:</p>
+
+<pre><code class="language-python">a1, a2 = erfa.dtf2d(&quot;TAI&quot;, 2009, 1, 1, 0, 0, 33.7)
+print(&quot;TAI&quot;, show(&quot;TAI&quot;, a1, a2))
+
+u1, u2 = erfa.taiutc(a1, a2)
+print(&quot;UTC&quot;, show(&quot;UTC&quot;, u1, u2))</code></pre>
+<pre><code class="language-plaintext">TAI 2009/01/01 00:00:33.700
+UTC 2008/12/31 23:59:60.700</code></pre>
+
+<h3>The function dat: leap seconds</h3>
+
+<p>The leap second table is hidden inside the function <code>dat</code>, which returns TAI&minus;UTC in seconds for a given UTC date (year, month, day and fraction of the day):</p>
+
+<pre><code class="language-python">print(erfa.dat(2009, 2, 13, 0.0))
+print(erfa.dat(2008, 12, 31, 0.5), erfa.dat(2009, 1, 1, 0.5))</code></pre>
+<pre><code class="language-plaintext">34.0
+33.0 34.0</code></pre>
+
+<p>Keep in mind that a leap second table is never complete: the future announcements are not yet known. The table is part of the compiled C library, so a library that was built before the latest leap second does not know it. For dates in the future, or before 1960 (when UTC did not exist), <code>dat</code> gives a warning: the value is probably not right. In <code>pyerfa</code> this arrives as an <code>ErfaWarning</code> and you can catch it. For serious operational systems it is better to maintain your own table (this is what astropy does, by downloading data from the IERS).</p>
+
+<pre><code class="language-python">import warnings
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter(&quot;always&quot;)
+    value = erfa.dat(2045, 1, 1, 0.0)
+print(value)
+print(caught[0].message)</code></pre>
+<pre><code class="language-plaintext">37.0
+ERFA function &quot;dat&quot; yielded 1 of &quot;dubious year (Note 1)&quot;</code></pre>
+
+<h2>The extra quantities</h2>
+
+<h3>UT1&minus;UTC</h3>
+
+<p>You must read it from an IERS table (the file <i>EOP C04</i> or the Bulletin A/B) for the date you need. In the cookbook, the value for 2006 January 15 is +0.3341 s. Thanks to the leap seconds, the value is always kept within &plusmn;0.9 seconds.</p>
+
+<h3>UT1&minus;TAI and TT&minus;UT1</h3>
+
+<p>You can obtain them from UT1&minus;UTC and the leap seconds: $$UT1 - TAI = (UT1 - UTC) - (TAI - UTC)$$ $$\Delta T = TT - UT1 = 32.184\ \mathrm{s} + (TAI - UTC) - (UT1 - UTC)$$ For dates in the past, a value of \(\Delta T\) has to come from a table, such as the one in the Astronomical Almanac, or from an empirical model.</p>
+
+<h3>TDB&minus;TT</h3>
+
+<p>This depends on the planetary ephemeris, so the user has to choose the way to compute it. The function <code>dtdb</code> evaluates a detailed series (almost 800 terms) which is accurate to a few nanoseconds. Its inputs are the time (TT will do), the fraction of the day in UT1, and the observer's position: east longitude, and two distances (in km) from the Earth's rotation axis and from the equatorial plane. If an error of 2 microseconds is acceptable, you can use zeros for the last three arguments to get the value for an observer at the Earth's centre.</p>
+
+<p>If 50 microseconds are enough and the year is between 1980 and 2100, you can use this simple formula, where \(g\) is approximately the mean anomaly of the Earth in radians:</p>
+
+<p>$$TDB \approx TT + 0.001657\ \sin g,\qquad g = 6.24 + 0.017202\,(JD_{TT} - 2451545)$$</p>
+
+<h2>A complete example</h2>
+
+<p>An observer is at latitude +19&deg; 28' 52.5" and longitude 155&deg; 55' 59.6" west, at sea level. On 2006 January 15 at 21:24:37.5 UTC she wants to know the time in all the supported time scales. We have to do several things:</p>
+
+<ol>
+  <li>Compute the observer's position in the form that <code>dtdb</code> needs (distances from the rotation axis and the equatorial plane). For this we convert the geodetic coordinates to geocentric Cartesian ones with <code>gd2gc</code>; the first argument <code>1</code> chooses the WGS84 ellipsoid.</li>
+  <li>Encode the UTC and convert it to UT1 (with UT1&minus;UTC = 0.3341 s), TAI, TT and TCG.</li>
+  <li>Compute TDB&minus;TT with <code>dtdb</code>, and obtain TDB and TCB.</li>
+</ol>
+
+<pre><code class="language-python"># --- observer (WGS84) --------------------------------------------------
+elon = erfa.af2a(&quot;-&quot;, 155, 55, 59.6)       # east longitude is negative here (west)
+phi  = erfa.af2a(&quot;+&quot;, 19, 28, 52.5)        # latitude
+hm   = 0.0                                 # height above the ellipsoid (m)
+
+xyz = erfa.gd2gc(1, elon, phi, hm)         # geocentric position in meters
+u = np.hypot(xyz[0], xyz[1])               # distance from the rotation axis (m)
+v = xyz[2]                                 # distance from the equatorial plane (m)
+
+# --- times ---------------------------------------------------------------
+utc1, utc2 = erfa.dtf2d(&quot;UTC&quot;, 2006, 1, 15, 21, 24, 37.5)
+
+dut = 0.3341                               # UT1-UTC in seconds (from IERS)
+ut11, ut12 = erfa.utcut1(utc1, utc2, dut)
+
+# fraction of the day (0..1) in UT1, needed by dtdb
+ut = (np.fmod(ut11, 1.0) + np.fmod(ut12, 1.0)) % 1.0 + 0.5
+
+tai1, tai2 = erfa.utctai(utc1, utc2)
+tt1, tt2   = erfa.taitt(tai1, tai2)
+tcg1, tcg2 = erfa.tttcg(tt1, tt2)
+
+# TDB-TT (TT is used instead of TDB as the argument, which makes no real difference)
+dtr = erfa.dtdb(tt1, tt2, ut, elon, u / 1e3, v / 1e3)    # distances in km
+tdb1, tdb2 = erfa.tttdb(tt1, tt2, dtr)
+tcb1, tcb2 = erfa.tdbtcb(tdb1, tdb2)
+
+# --- report --------------------------------------------------------------
+for name, (a, b) in [(&quot;UTC&quot;, (utc1, utc2)), (&quot;UT1&quot;, (ut11, ut12)), (&quot;TAI&quot;, (tai1, tai2)),
+                     (&quot;TT&quot;,  (tt1, tt2)),   (&quot;TCG&quot;, (tcg1, tcg2)), (&quot;TDB&quot;, (tdb1, tdb2)),
+                     (&quot;TCB&quot;, (tcb1, tcb2))]:
+    print(f&quot;{name:3s}&quot;, show(name, a, b, 6))</code></pre>
+<pre><code class="language-plaintext">UTC 2006/01/15 21:24:37.500000
+UT1 2006/01/15 21:24:37.834100
+TAI 2006/01/15 21:25:10.500000
+TT  2006/01/15 21:25:42.684000
+TCG 2006/01/15 21:25:43.322690
+TDB 2006/01/15 21:25:42.684373
+TCB 2006/01/15 21:25:56.893952</code></pre>
+
+<p>Each of these answers has its own purpose:</p>
+
+<ul>
+  <li><b>UT1</b> is the one for pointing a telescope.</li>
+  <li><b>TT</b> is for looking up a planet's position in an ephemeris.</li>
+  <li><b>TDB</b> is for interpreting pulsar observations.</li>
+  <li><b>TAI</b> is for measuring long intervals between events, and makes a program safe against leap seconds.</li>
+  <li><b>TCG</b> and <b>TCB</b> are for specialized relativistic work.</li>
+  <li><b>UTC</b> is just for logging and conversion to local time.</li>
+</ul>
+
+<p>Let us also see how large the quantity TDB&minus;TT really is, and how well the simple formula works for this date:</p>
+
+<pre><code class="language-python">g = 6.24 + 0.017202 * ((tt1 - 2451545.0) + tt2)
+print(f&quot;dtdb:      {dtr * 1000:.4f} ms&quot;)
+print(f&quot;simple:    {0.001657 * np.sin(g) * 1000:.4f} ms&quot;)
+print(f&quot;Delta T:   {32.184 + erfa.dat(2006, 1, 15, 0.0) - dut:.4f} s&quot;)</code></pre>
+<pre><code class="language-plaintext">dtdb:      0.3728 ms
+simple:    0.3488 ms
+Delta T:   64.8499 s</code></pre>
+
+<p>The difference between the two formulas is about 25 microseconds, within the stated limit of 50 &mu;s. The last line is the value of &Delta;T (TT&minus;UT1) for that date, around 64.85 seconds.</p>
+
+<h2>Summary</h2>
+
+<ul>
+  <li>Always encode times with <code>dtf2d</code> and decode with <code>d2dtf</code>, especially for UTC.</li>
+  <li>SOFA stores a Julian date as two numbers to keep full precision.</li>
+  <li>Choose the right time scale: UT1 for the orientation of the Earth, TT (or TDB) for ephemerides, TAI for continuous intervals, UTC only for civil use.</li>
+  <li>Scales are connected by small functions that you chain. The ones that need an extra number (UT1&minus;UTC, &Delta;T, TDB&minus;TT) tell you so in their arguments.</li>
+  <li>The leap second table has to be kept up to date.</li>
+</ul>
+
+
+</body>
+</html>

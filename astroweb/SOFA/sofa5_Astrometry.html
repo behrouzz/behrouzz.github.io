@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>SOFA - Astrometry Tools</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>SOFA: Astrometry Tools</h1>
+
+<p>This is the heart of the SOFA collection. <em>Astrometry</em> is the science of measuring positions on the sky, and the SOFA astrometry tools answer a very practical question: <b>a star has a given entry in a catalog; in which direction do I have to point my telescope, at a given time, from a given place on the Earth?</b> In between lie proper motion, parallax, the bending of light by the Sun, the aberration caused by the Earth's motion, precession and nutation, the rotation of the Earth and the refraction of the atmosphere. SOFA handles all of them in a rigorous and consistent way, to the level of a few microarcseconds in the best case.</p>
+
+<h2>The chain of transformations</h2>
+
+<p>The next figure shows every step between the catalog entry of a star (at the top) and the direction in which the observer sees it (at the bottom). The short names on the right are the coordinate systems that you met in the previous chapter.</p>
+
+<pre>
+ catalog entry  ICRS [ra, dec, pm_ra, pm_dec, parallax, radial velocity]
+        |  space motion, parallax
+        v
+ astrometric place       BCRS [ra, dec]
+        |  light deflection by the Sun (and planets), aberration
+        v
+ GCRS [ra, dec]
+        |  frame bias, precession-nutation
+        v
+ CIRS [ra, dec]          &lt;-- "current" coordinates, geocentric
+        |  Earth rotation angle, polar motion, observer longitude
+        v
+ local apparent [hour angle, dec]
+        |  diurnal aberration (and parallax)
+        v
+ topocentric [hour angle, dec]  -->  [azimuth, zenith distance]
+        |  atmospheric refraction
+        v
+ observed [azimuth, zenith distance]  /  [hour angle, dec]  /  [ra, dec]
+</pre>
+
+<p>Not every application needs the whole chain. A space telescope needs only the upper part (up to GCRS). A radio interferometer may stop at the topocentric direction, because radio waves are hardly refracted. SOFA lets you use exactly the part that you need.</p>
+
+<h2>Quick start</h2>
+
+<p>Often three functions are enough. Remember that all the angles in <code>pyerfa</code> are in <b>radians</b>.</p>
+
+<h3>From catalog to CIRS: <code>atci13</code></h3>
+
+<pre><code class="language-python sig">ri, di, eo = erfa.atci13(rc, dc, pr, pd, px, rv, date1, date2)</code></pre>
+
+<ul>
+  <li><code>rc, dc</code>: ICRS right ascension and declination at the catalog epoch (radians).</li>
+  <li><code>pr, pd</code>: proper motions in radians per <em>Julian year</em>. <b>Warning:</b> <code>pr</code> is the rate of change of the coordinate \(\alpha\) itself, \(d\alpha/dt\), and not \(\mu_{\alpha*} = \mu_\alpha\cos\delta\), the "motion on the sky" that you find in Hipparcos, Gaia and SIMBAD. If the catalog gives \(\mu_{\alpha*}\), divide it by \(\cos\delta\).</li>
+  <li><code>px</code>: parallax in arcseconds. <code>rv</code>: radial velocity in km/s.</li>
+  <li><code>date1, date2</code>: the date as a two-part Julian date in TT.</li>
+  <li>Returns the CIRS right ascension and declination <code>ri, di</code> (radians) and the equation of the origins <code>eo</code>. The classical geocentric apparent place is \((ri - eo,\ di)\).</li>
+</ul>
+
+<h3>From CIRS to observed: <code>atio13</code></h3>
+
+<pre><code class="language-python sig">aob, zob, hob, dob, rob = erfa.atio13(ri, di, utc1, utc2, dut1, elong, phi, hm,
+                                      xp, yp, phpa, tc, rh, wl)</code></pre>
+
+<ul>
+  <li><code>utc1, utc2</code>: the UTC, encoded with <code>dtf2d</code> (see the chapter about time). <code>dut1</code>: UT1&minus;UTC in seconds.</li>
+  <li><code>elong, phi, hm</code>: the observer's east longitude, geodetic latitude (radians) and height above the WGS84 ellipsoid (meters).</li>
+  <li><code>xp, yp</code>: polar motion (radians). In low-accuracy work you can use zero.</li>
+  <li><code>phpa, tc, rh</code>: the pressure in hectopascals (= millibars), the temperature in Celsius and the relative humidity (0 to 1, where 1 means 100%) at the observer. <code>wl</code>: the wavelength of observation in micrometers; a value above 100 means radio.</li>
+  <li>Returns the observed azimuth <code>aob</code> (north through east), zenith distance <code>zob</code>, hour angle <code>hob</code>, declination <code>dob</code> and right ascension <code>rob</code>. They are different ways to write the same direction.</li>
+</ul>
+
+<h3>Everything in one call: <code>atco13</code></h3>
+
+<pre><code class="language-python sig">aob, zob, hob, dob, rob, eo = erfa.atco13(rc, dc, pr, pd, px, rv, utc1, utc2, dut1,
+                                          elong, phi, hm, xp, yp, phpa, tc, rh, wl)</code></pre>
+
+<p>It does the whole job, from the catalog entry to the observed direction. Each of the three functions has an inverse: <code>atic13</code> (CIRS to astrometric ICRS), <code>atoi13</code> (observed to CIRS) and <code>atoc13</code> (observed to ICRS). For the simple conversions between the hour angle \(h\) and declination and the azimuth and elevation there are also <code>hd2ae</code> and <code>ae2hd</code> (and <code>hd2pa</code> for the parallactic angle).</p>
+
+<p>A few remarks. The pressure should be the real pressure at the place of the observer, not the pressure reduced to sea level (the "QNH" of pilots) that weather reports give. Use the "QFE": at an altitude of 625 m the pressure is about 950 hPa, not 1013. The result is given as zenith distance, not altitude, to avoid any confusion about which horizon is meant. And when the input is UTC, always encode it with <code>dtf2d</code> (never as an ordinary Julian date), so that leap seconds are correctly handled.</p>
+
+<h2>The three kinds of coordinates</h2>
+
+<ul>
+  <li><b>Catalog coordinates</b> are meant to be valid for a long time, so they are given in a system fixed on the distant background (ICRS) together with the motion of the star. SOFA supports only the ICRS as the catalog system. Older catalogs used mean equator and equinox of 1950 or 2000: for these, there are the functions <code>fk45z</code>, <code>fk425</code>, <code>fk52h</code> etc. (see the last chapter).</li>
+  <li><b>Current coordinates</b> are the ones for the date of observation, independent of the observer's location: the CIRS \((\alpha, \delta)\) (or the classical apparent place). In this system the hour angle is \(h = \theta + \lambda - \alpha\) where \(\theta\) is the Earth rotation angle and \(\lambda\) the east longitude.</li>
+  <li><b>Observed coordinates</b> are the direction in which a perfect telescope has to be pointed in order to see the star, including refraction.</li>
+</ul>
+
+<h2>Design of the SOFA astrometry functions</h2>
+
+<p>The functions are designed according to four principles: (1) the most common transformations should need only one call; (2) the best accuracy should be available; (3) but without making things hard for the user; (4) efficiency matters, but must not complicate simple cases.</p>
+
+<h3>Two stages: context and transformation</h3>
+
+<p>The calculation is naturally divided in two. Some parameters do not depend on the star at all: the date, the position and velocity of the Earth, the precession-nutation matrix, the rotation of the Earth, the position of the observer and the weather. These are collected in a record called the <em>context</em> (named <code>ASTROM</code> in SOFA; in <code>pyerfa</code> it is a NumPy structured value). Heavy computations, like the 1365-term nutation series, are done only once, when the context is filled. After that, each star is transformed quickly, using the context. If you have thousands of stars, you build the context once; if you have one star, the one-call functions do both stages for you.</p>
+
+<p>The names of the functions follow a pattern (the table below is based on the SOFA summary):</p>
+
+<table border="1" cellpadding="6" style="border-collapse:collapse">
+  <tr><th>Part of the name</th><th>Meaning</th></tr>
+  <tr><td><code>ap...</code></td><td>"astrometry parameters": fills the context</td></tr>
+  <tr><td><code>at...</code></td><td>"astrometry transformation": changes the reference system of a position</td></tr>
+  <tr><td><code>c</code></td><td>catalog (ICRS)</td></tr>
+  <tr><td><code>g</code></td><td>geocentric observer, GCRS</td></tr>
+  <tr><td><code>s</code></td><td>space observer with a known geocentric position and velocity</td></tr>
+  <tr><td><code>i</code></td><td>intermediate: CIRS</td></tr>
+  <tr><td><code>o</code></td><td>observed, including refraction</td></tr>
+  <tr><td><code>q</code></td><td>"quick": uses a ready context</td></tr>
+  <tr><td><code>n</code></td><td>light deflection by multiple bodies</td></tr>
+  <tr><td><code>z</code></td><td>zero proper motion and parallax (or already applied)</td></tr>
+  <tr><td><code>13</code></td><td>"2013 models": the standard SOFA models. IAU 2006/2000A for precession-nutation, IAU 2000 for Earth rotation, and <code>epv00</code> for the Earth's ephemeris.</td></tr>
+</table>
+
+<p>The functions that fill the context, and what they prepare:</p>
+
+<table border="1" cellpadding="6" style="border-collapse:collapse">
+  <tr><th>Standard models</th><th>Your own data</th><th>Observer</th><th>Prepares</th></tr>
+  <tr><td><code>apcg13</code></td><td><code>apcg</code></td><td>geocentric</td><td>ICRS &harr; GCRS</td></tr>
+  <tr><td><code>apcs13</code></td><td><code>apcs</code></td><td>in space</td><td>ICRS &harr; GCRS</td></tr>
+  <tr><td><code>apci13</code></td><td><code>apci</code></td><td>on the Earth (geocentric CIRS)</td><td>ICRS &harr; CIRS</td></tr>
+  <tr><td><code>apio13</code></td><td><code>apio</code></td><td>on the Earth</td><td>CIRS &harr; observed</td></tr>
+  <tr><td><code>apco13</code></td><td><code>apco</code></td><td>on the Earth</td><td>ICRS &harr; observed</td></tr>
+  <tr><td><code>aper13</code></td><td><code>aper</code></td><td>on the Earth</td><td>only updates the Earth rotation</td></tr>
+</table>
+
+<p>And the functions that use the context are: <code>atccq</code> (catalog &rarr; astrometric), <code>atciq</code> (ICRS &rarr; CIRS or GCRS), <code>atciqn</code> (the same, with several light-deflecting bodies), <code>atciqz</code> (the same for a star with no proper motion and parallax), <code>aticq</code> and <code>aticqn</code> (the inverses), <code>atioq</code> (CIRS &rarr; observed) and <code>atoiq</code> (observed &rarr; CIRS).</p>
+
+<h2>Algorithms and accuracy</h2>
+
+<p>It is useful to know what each step does and how well it does it.</p>
+
+<h3>Time scales</h3>
+
+<p>Several functions ask for the TDB. You can safely give TT instead: the difference is less than 2 ms, which has no effect on aberration or precession. But UTC and TT differ by more than a minute, and the difference matters whenever the accuracy has to be better than a milliarcsecond. For the observed place, the functions also need UT1 (the time of the Earth's rotation), so you must know UT1&minus;UTC from the IERS. This is the most important number to get right when you compute an observed place (for the pointing of a telescope): without it, the error can be up to about 13 arcseconds.</p>
+
+<h3>Space motion and parallax: <code>pmpx</code></h3>
+
+<p>The star moves in a straight line with constant speed. Combined with the Earth's position (parallax), this gives the direction of the star in the barycentric system at the time of observation. The function is also tolerant of unphysical data (for example, a very small parallax with a large proper motion). It includes a small correction for the Roemer effect (the change of the light travel time). Stars whose parallax is zero or negative, or those that have a very high speed, can be treated with the safer <code>pmsafe</code>, and <code>starpm</code> is a more rigorous one.</p>
+
+<h3>Light deflection: <code>ld</code>, <code>ldsun</code>, <code>ldn</code></h3>
+
+<p>According to general relativity, light passing near a massive body is bent. For a star, the deflection by the Sun is up to 1.75 arcseconds at the limb of the Sun. The function <code>ldsun</code> computes this effect for the Sun alone and is accurate to about a microarcsecond over most of the sky. For the planets (for example, a star near Jupiter) one uses <code>ldn</code>, with the mass and the position of each body, or <code>ld</code> for one body at a time. The effect of Jupiter can reach 16 mas at its limb.</p>
+
+<h3>Aberration: <code>ab</code></h3>
+
+<p>Because the Earth moves at about 30 km/s, a star appears shifted in the direction of the Earth's motion, by up to about 20 arcseconds. This is the <em>aberration of light</em>. <code>ab</code> uses the velocity of the observer, with the correct relativistic formula. If the velocity of the observer (Earth's centre plus the rotation of the Earth) is given, the whole aberration is computed in one go; with the velocity of the geocentre only you get the annual aberration, and the diurnal aberration (up to 0.3 arcsecond) has to be added later.</p>
+
+<h3>Earth attitude and rotation</h3>
+
+<p>The functions with names ending in 13 use the IAU 2006/2000A models for precession-nutation. They have an accuracy of about 1 mas, limited by the <em>free core nutation</em>, which cannot be modelled. For best results, use the lower-level functions (<code>apci</code>, <code>apco</code>) and give them the CIP coordinates \(X, Y\) with the corrections published by the IERS (as in Example 2 of the previous chapter).</p>
+
+<h3>The observer on the Earth: <code>pvtob</code></h3>
+
+<p>This function gives the position and the velocity of the observer in the CIRS. The WGS84 ellipsoid is always used (other ellipsoids make too small a difference to matter). Polar motion is included.</p>
+
+<h3>Refraction: <code>refco</code></h3>
+
+<p>The atmosphere bends the light, so a star appears higher than it really is. There is no perfect model for this. SOFA uses the classical expression</p>
+
+<p>$$\Delta z = A\tan z + B\tan^3 z$$</p>
+
+<p>where \(z\) is the zenith distance, with special care near the horizon. The constants \(A\) and \(B\) come from <code>refco</code>, which takes the pressure, temperature, humidity and wavelength. The model is better than 10 mas (RMS) for visible light and better than 50 mas for radio waves, down to \(z = 75^\circ\). We can look at how large the effect is:</p>
+
+<pre><code class="language-python">import numpy as np
+import erfa
+
+DD2R, DR2D, DAS2R, DMAS2R = erfa.DD2R, erfa.DR2D, erfa.DAS2R, erfa.DMAS2R
+
+# standard conditions: 1013.25 hPa, 15 C, 50 % humidity, visible light
+A, B = erfa.refco(1013.25, 15.0, 0.5, 0.55)
+print(f&quot;A = {A / DAS2R:.3f} arcsec, B = {B / DAS2R:.4f} arcsec&quot;)
+
+for z in (30, 45, 60, 75, 85):
+    t = np.tan(np.radians(z))
+    print(f&quot;zenith distance {z:2d} deg: refraction = {(A * t + B * t**3) / DAS2R:6.1f} arcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">A = 57.176 arcsec, B = -0.0654 arcsec
+zenith distance 30 deg: refraction =   33.0 arcsec
+zenith distance 45 deg: refraction =   57.1 arcsec
+zenith distance 60 deg: refraction =   98.7 arcsec
+zenith distance 75 deg: refraction =  210.0 arcsec
+zenith distance 85 deg: refraction =  555.8 arcsec</code></pre>
+
+<p>At 45&deg; from the zenith, the refraction is about one arcminute, and it grows quickly near the horizon, where it reaches about half a degree. This is why even the best refraction models limit the accuracy of any observed place.</p>
+
+<h3>How accurate is it?</h3>
+
+<ul>
+  <li>Everything that involves refraction is limited by the refraction model.</li>
+  <li>Without refraction, the precession-nutation model limits the accuracy to about 1 mas.</li>
+  <li>The deflection by the Sun is accurate to 1 &mu;as over most of the sky. Near the Sun it may reach 0.5 mas, and close to a planet other bodies may matter (use <code>ldn</code>).</li>
+  <li>The Earth ephemeris <code>epv00</code> limits the aberration to about 5 &mu;as.</li>
+  <li>Each transformation and its inverse agree to better than 1 &mu;as (if there is no refraction).</li>
+</ul>
+
+<h2>Example 1: from catalog to observed place</h2>
+
+<p>As the first complete example we take the star Gliese 555 (Hipparcos number 71253; SIMBAD name "BD-11 3759"). It is also the star used in Example 3 below, there with slightly different (fictitious) data. The catalog data from SIMBAD are:</p>
+
+<pre>
+ra              218.57004859310788   deg
+dec             -12.519559582093887  deg
+pmra            -355.138             mas/yr
+pmdec            593.04              mas/yr
+plx_value        159.9225            mas
+rvz_radvel        -1.28              km/s
+</pre>
+
+<p>We observe it from Strasbourg, France, on 10 February 2024 at 22:32:37 UTC. The Earth orientation parameters come from the IERS. First, we put all the numbers in the units that SOFA wants. Two details need attention. SIMBAD's <code>pmra</code> is \(\mu_\alpha\cos\delta\), so we divide it by \(\cos\delta\). And the parallax must be in arcseconds.</p>
+
+<pre><code class="language-python"># --- the star ---------------------------------------------------------------
+rc = 218.57004859310788 * DD2R              # right ascension (rad)
+dc = -12.519559582093887 * DD2R             # declination (rad)
+pr = -355.138 * DMAS2R / np.cos(dc)         # d(alpha)/dt: pmra is mu_alpha * cos(dec)
+pd = 593.04 * DMAS2R
+px = 159.9225 * 0.001                       # mas -&gt; arcsec
+rv = -1.28                                  # km/s
+
+# --- the time ---------------------------------------------------------------
+utc1, utc2 = erfa.dtf2d(&quot;UTC&quot;, 2024, 2, 10, 22, 32, 37.0)
+
+# --- Earth orientation parameters (IERS) ----------------------------------
+dut1 = 0.00261476                           # UT1-UTC (s)
+xp = 0.0473476 * DAS2R                      # polar motion
+yp = 0.2368623 * DAS2R
+
+# --- the observing site -----------------------------------------------------
+elong = 7.744083817548831 * DD2R            # east longitude
+phi = 48.58313582900411 * DD2R              # geodetic latitude
+hm = 140.0                                  # height (m)
+phpa = 987.0                                # pressure (hPa)
+tc = 15.0                                   # temperature (C)
+rh = 0.92                                   # relative humidity (fraction)
+wl = 0.55                                   # wavelength (micrometers)
+
+aob, zob, hob, dob, rob, eo = erfa.atco13(rc, dc, pr, pd, px, rv, utc1, utc2, dut1,
+                                          elong, phi, hm, xp, yp, phpa, tc, rh, wl)
+
+print(f&quot;Azimuth                 : {aob * DR2D:.6f} deg&quot;)
+print(f&quot;Zenith distance         : {zob * DR2D:.6f} deg&quot;)
+print(f&quot;Hour angle              : {hob * DR2D:.6f} deg&quot;)
+print(f&quot;Declination             : {dob * DR2D:.6f} deg&quot;)
+print(f&quot;Right ascension (CIO)   : {rob * DR2D:.6f} deg&quot;)
+print(f&quot;Equation of the origins : {eo * DR2D:.6f} deg&quot;)</code></pre>
+<pre><code class="language-plaintext">Azimuth                 : 96.595528 deg
+Zenith distance         : 100.899352 deg
+Hour angle              : -92.377729 deg
+Declination             : -12.498271 deg
+Right ascension (CIO)   : 218.471414 deg
+Equation of the origins : -0.307959 deg</code></pre>
+
+<p>The zenith distance is larger than 90&deg;: the star is below the horizon at that moment, so it cannot be seen from Strasbourg. The azimuth of 96.6&deg; means that it is just south of east (below the horizon) and the hour angle of &minus;92&deg; (about &minus;6.2 hours) tells us it has not yet culminated: it will cross the meridian in about six hours, and rise before that.</p>
+
+<h2>Example 2: the same star, step by step (to CIRS)</h2>
+
+<p>When we need the position in the CIRS system and not the observed place, we use <code>atci13</code>. We can also do it in two stages, with the context. First <code>apci13</code> fills a context for the date (in TT), then <code>atciq</code> transforms the star with it. The results are identical:</p>
+
+<pre><code class="language-python"># UTC -&gt; TAI -&gt; TT
+tai1, tai2 = erfa.utctai(utc1, utc2)
+tt1, tt2 = erfa.taitt(tai1, tai2)
+
+# in one call
+ri, di, eo = erfa.atci13(rc, dc, pr, pd, px, rv, tt1, tt2)
+print(f&quot;atci13        : {ri * DR2D:.9f}  {di * DR2D:.9f}&quot;)
+
+# in two stages: context first, then the star
+astrom, eo = erfa.apci13(tt1, tt2)
+ri2, di2 = erfa.atciq(rc, dc, pr, pd, px, rv, astrom)
+print(f&quot;apci13+atciq  : {ri2 * DR2D:.9f}  {di2 * DR2D:.9f}&quot;)</code></pre>
+<pre><code class="language-plaintext">atci13        : 218.586845398  -12.622083532
+apci13+atciq  : 218.586845398  -12.622083532</code></pre>
+
+<p>The CIRS position is not far from the catalog position (218.57&deg;, &minus;12.52&deg;). The difference of about 0.017&deg; in right ascension and 0.1&deg; in declination comes mostly from 24 years of precession (up to about 20 arcseconds per year), plus nutation, aberration and the proper motion of the star. The context <code>astrom</code> can be reused for any number of stars, as we show next.</p>
+
+<h2>Example 3: the SOFA cookbook example, in full</h2>
+
+<p>This long example from the SOFA documentation goes through all the steps of the chain, in a variety of ways. Its aim is to show how the different functions are related. All the values are artificial, although realistic. The site is at latitude 15&deg; 57' 42.8" S, longitude 5&deg; 41' 54.2" W, at 625 m. The star is at ICRS (14h 34m 16.81183s, &minus;12&deg; 31' 10.3965") with proper motions of &minus;354.45 and +595.35 mas/yr, a parallax of 0.16499" and a null radial velocity. The date is 2013 April 2, 23h 15m 43.55s UTC. The Earth orientation parameters are: polar motion \(x_p = 50.995\) mas, \(y_p = 376.723\) mas, UT1&minus;UTC = 155.0675 ms, and the corrections to the CIP, \(dX = 0.269\) mas and \(dY = -0.274\) mas.</p>
+
+<p>First, the setup. The helper function <code>reprd</code> prints a position in hours/degrees to the same format as the C example:</p>
+
+<pre><code class="language-python">def reprd(label, ra, dec):
+    &quot;&quot;&quot;Print right ascension (h m s) and declination (d m s).&quot;&quot;&quot;
+    sign, t = erfa.a2tf(7, ra)
+    sign2, d = erfa.a2af(6, dec)
+    print(f&quot;{label:&gt;26s} {t[&#x27;h&#x27;]:02d} {t[&#x27;m&#x27;]:02d} {t[&#x27;s&#x27;]:02d}.{t[&#x27;f&#x27;]:07d} &quot;
+          f&quot;{sign2.decode()}{d[&#x27;h&#x27;]:02d} {d[&#x27;m&#x27;]:02d} {d[&#x27;s&#x27;]:02d}.{d[&#x27;f&#x27;]:06d}&quot;)
+
+# site
+elong = erfa.af2a(&quot;-&quot;, 5, 41, 54.2)
+phi = erfa.af2a(&quot;-&quot;, 15, 57, 42.8)
+hm = 625.0
+
+# weather and wavelength
+phpa, tc, rh, wl = 952.0, 18.5, 0.83, 0.55
+
+# times: UTC, then TT
+utc1, utc2 = erfa.dtf2d(&quot;UTC&quot;, 2013, 4, 2, 23, 15, 43.55)
+tai1, tai2 = erfa.utctai(utc1, utc2)
+tt1, tt2 = erfa.taitt(tai1, tai2)
+
+# Earth orientation parameters
+xp = 50.995e-3 * DAS2R
+yp = 376.723e-3 * DAS2R
+dut1 = 155.0675e-3
+dx = 0.269e-3 * DAS2R
+dy = -0.274e-3 * DAS2R
+
+# the star
+rc = erfa.tf2a(&quot;+&quot;, 14, 34, 16.81183)
+dc = erfa.af2a(&quot;-&quot;, 12, 31, 10.3965)
+pr = np.arctan2(-354.45e-3 * DAS2R, np.cos(dc))     # mu_alpha* -&gt; d(alpha)/dt
+pd = 595.35e-3 * DAS2R
+px = 164.99e-3
+rv = 0.0
+
+reprd(&quot;ICRS, epoch J2000.0:&quot;, rc, dc)</code></pre>
+<pre><code class="language-plaintext">      ICRS, epoch J2000.0: 14 34 16.8118300 -12 31 10.396500</code></pre>
+
+<p>Step 1: the catalog position is changed to an <em>astrometric place</em> with <code>atcc13</code>. This removes the space motion and the parallax, and puts the star on the celestial sphere, as if it were a distant object in the same direction on that date. That is the quantity to compare with the J2000.0 position at the top: by 2013 the proper motion moved the star by some seconds of arc.</p>
+
+<pre><code class="language-python">rca, dca = erfa.atcc13(rc, dc, pr, pd, px, rv, tt1, tt2)
+reprd(&quot;catalog -&gt; astrometric:&quot;, rca, dca)</code></pre>
+<pre><code class="language-plaintext">   catalog -&gt; astrometric: 14 34 16.4960283 -12 31 02.523786</code></pre>
+
+<p>Step 2: the astrometric place to CIRS with <code>atci13</code>, giving the star zero proper motion and parallax (the effects are already included). Then, the catalog position is moved directly to CIRS. The two results must be the same:</p>
+
+<pre><code class="language-python">ri, di, eo = erfa.atci13(rca, dca, 0.0, 0.0, 0.0, 0.0, tt1, tt2)
+reprd(&quot;astrometric -&gt; CIRS:&quot;, ri, di)
+
+ri, di, eo = erfa.atci13(rc, dc, pr, pd, px, rv, tt1, tt2)
+reprd(&quot;catalog -&gt; CIRS:&quot;, ri, di)</code></pre>
+<pre><code class="language-plaintext">      astrometric -&gt; CIRS: 14 34 20.2370587 -12 34 36.381654
+          catalog -&gt; CIRS: 14 34 20.2370587 -12 34 36.381654</code></pre>
+
+<p>Step 3: the classical (equinox-based) geocentric apparent place is obtained from CIRS with the equation of the origins: \(\alpha_{app} = \alpha_{CIRS} - EO\). The declination is the same in both systems.</p>
+
+<pre><code class="language-python">ra = erfa.anp(ri - eo)
+da = di
+reprd(&quot;geocentric apparent:&quot;, ra, da)</code></pre>
+<pre><code class="language-plaintext">      geocentric apparent: 14 35 01.7725802 -12 34 36.381654</code></pre>
+
+<p>Step 4: from CIRS to the observer's sky with <code>atio13</code>. Giving zero for the pressure switches off refraction and gives the <em>topocentric</em> position (what an observer would see without an atmosphere). With the weather data, we get the <em>observed</em> position.</p>
+
+<pre><code class="language-python"># topocentric (no refraction: zero pressure, temperature, humidity and wavelength)
+aot, zot, hot, dot, rot = erfa.atio13(ri, di, utc1, utc2, dut1, elong, phi, hm,
+                                      xp, yp, 0.0, 0.0, 0.0, 0.0)
+reprd(&quot;CIRS -&gt; topocentric:&quot;, rot, dot)
+
+# observed (with refraction)
+aob, zob, hob, dob, rob = erfa.atio13(ri, di, utc1, utc2, dut1, elong, phi, hm,
+                                      xp, yp, phpa, tc, rh, wl)
+reprd(&quot;CIRS -&gt; observed:&quot;, rob, dob)</code></pre>
+<pre><code class="language-plaintext">      CIRS -&gt; topocentric: 14 34 20.2570287 -12 34 36.141207
+         CIRS -&gt; observed: 14 34 16.9649101 -12 34 44.643091</code></pre>
+
+<p>Step 5: the whole transformation from the catalog to the observed place in a single call, <code>atco13</code>. The result is slightly different from the two-stage route (by a few microarcseconds). The reason is that the two-stage route first computes a geocentric position and adds diurnal effects later in a way that is not perfectly rigorous. The direct function includes the observer's position and velocity in the aberration and parallax from the beginning, and so it is more rigorous:</p>
+
+<pre><code class="language-python">aob, zob, hob, dob, rob, eo = erfa.atco13(rc, dc, pr, pd, px, rv, utc1, utc2, dut1,
+                                          elong, phi, hm, xp, yp, phpa, tc, rh, wl)
+reprd(&quot;ICRS -&gt; observed:&quot;, rob, dob)</code></pre>
+<pre><code class="language-plaintext">         ICRS -&gt; observed: 14 34 16.9649106 -12 34 44.643094</code></pre>
+
+<p>Step 6: using our own data in the context. We now go back to ICRS &rarr; CIRS, but this time we use better data than the standard models: the position and the velocity of the Earth from the JPL ephemeris DE405, and the CIP from the IERS corrections. We start from the SOFA ephemeris <code>epv00</code> (we need the heliocentric position anyway), then overwrite the barycentric position and velocity with the JPL values. The CIP is computed from the IAU 2000A matrix and the corrections \(dX, dY\) are added, then <code>s06</code> gives the locator \(s\). With <code>apci</code> we fill the context, and with <code>atciq</code> we transform the star:</p>
+
+<pre><code class="language-python">pvh, pvb = erfa.epv00(tt1, tt2)        # SOFA ephemeris of the Earth (heliocentric and barycentric)
+
+# replace the barycentric position and velocity by JPL DE405 values (au, au/day)
+pvb = pvb.copy()
+pvb[&quot;p&quot;] = [-0.9741704366519668, -0.2115201000882231, -0.0917583114068277]
+pvb[&quot;v&quot;] = [0.0036436589347388, -0.0154287318503146, -0.0066892203821059]
+
+# CIP from the IAU 2000A model, plus the corrections from the IERS
+rnpb = erfa.pnm00a(tt1, tt2)
+x, y = erfa.bpn2xy(rnpb)
+x, y = x + dx, y + dy
+s = erfa.s06(tt1, tt2, x, y)
+
+# fill the context, and use it
+astrom = erfa.apci(tt1, tt2, pvb, pvh[&quot;p&quot;], x, y, s)
+ri, di = erfa.atciq(rc, dc, pr, pd, px, rv, astrom)
+reprd(&quot;ICRS -&gt; CIRS (JPL, IERS):&quot;, ri, di)</code></pre>
+<pre><code class="language-plaintext"> ICRS -&gt; CIRS (JPL, IERS): 14 34 20.2370639 -12 34 36.381756</code></pre>
+
+<p>The result differs from the standard one by about 0.1 milliarcsecond. Almost all of the difference comes from the IERS corrections to the CIP, which mostly describe the free core nutation that the standard model leaves out. The better Earth velocity contributes at most 5 &mu;as.</p>
+
+<p>Step 7: light deflection by the planets too. So far only the Sun deflected the light. With <code>atciqn</code> we can add more bodies. For each body we need its mass (in solar masses), a limiting angle (<code>dl</code>, inside which the calculation is switched off to avoid numerical trouble), and its barycentric position and velocity at the time of the observation (here again from DE405). The order is the order in which light passes the bodies: Saturn, Jupiter and the Sun. In <code>pyerfa</code> the bodies are a NumPy array with the special type <code>erfa.dt_eraLDBODY</code>:</p>
+
+<pre><code class="language-python">bodies = np.zeros(3, dtype=erfa.dt_eraLDBODY)
+
+bodies[&quot;bm&quot;] = [0.00028574, 0.00095435, 1.0]        # masses in solar masses
+bodies[&quot;dl&quot;] = [3e-10, 3e-9, 6e-6]                  # deflection limiters
+bodies[&quot;pv&quot;][&quot;p&quot;] = [[-7.8101442680818964, -5.6095668114887358, -1.9807981923749924],
+                     [0.7380987962351833, 4.6365869247538951, 1.9693136030111202],
+                     [-0.0007121743770509, -0.0023047830339257, -0.0010586596574639]]
+bodies[&quot;pv&quot;][&quot;v&quot;] = [[0.0030723248971152, -0.0040699547707598, -0.0018133584165345],
+                     [-0.0075581692172088, 0.0012691372216750, 0.0007279990012801],
+                     [0.0000062923521264, -0.0000003308883872, -0.0000002964866231]]
+
+ri, di = erfa.atciqn(rc, dc, pr, pd, px, rv, astrom, bodies)
+reprd(&quot;ICRS -&gt; CIRS (+ planets):&quot;, ri, di)</code></pre>
+<pre><code class="language-plaintext"> ICRS -&gt; CIRS (+ planets): 14 34 20.2370658 -12 34 36.381784</code></pre>
+
+<p>The change is only about 40 microarcseconds, mainly due to Saturn, which in this fictitious case is 0.38&deg; from the star, while Jupiter and the Sun are about 150&deg; away.</p>
+
+<p>Step 8: as a final check, we return from CIRS to the astrometric place with the inverse function <code>aticqn</code>. It agrees with what we had in Step 1:</p>
+
+<pre><code class="language-python">rca2, dca2 = erfa.aticqn(ri, di, astrom, bodies)
+reprd(&quot;CIRS -&gt; astrometric:&quot;, rca2, dca2)</code></pre>
+<pre><code class="language-plaintext">      CIRS -&gt; astrometric: 14 34 16.4960283 -12 31 02.523786</code></pre>
+
+<h2>Example 4: many stars, one context</h2>
+
+<p>Observatories transform lists of thousands of stars. The big saving is to fill the context once with <code>apco13</code> (it is star-independent), then use <code>atciq</code> and <code>atioq</code> for the stars. Because <code>pyerfa</code> functions accept arrays, we can even transform all the stars in a single call. We use three objects: the star of Example 3, the fictitious star of Example 5 below, and an imaginary very distant source with zero proper motion and parallax. All are observed with the conditions of Example 3.</p>
+
+<pre><code class="language-python"># the context for the site, the date and the weather of Example 3 (done only once)
+astrom, eo = erfa.apco13(utc1, utc2, dut1, elong, phi, hm, xp, yp, phpa, tc, rh, wl)
+
+# three stars: ICRS ra, dec (rad); pr, pd (rad/yr); parallax (arcsec); radial velocity (km/s)
+stars_rc = np.array([rc, 353.22987757 * DD2R, 180.0 * DD2R])
+stars_dc = np.array([dc, 52.27730247 * DD2R, 30.0 * DD2R])
+stars_pr = np.array([pr, np.arctan2(22.9 * DMAS2R, np.cos(stars_dc[1])), 0.0])
+stars_pd = np.array([pd, -2.1 * DMAS2R, 0.0])
+stars_px = np.array([px, 0.023, 0.0])
+stars_rv = np.array([rv, 25.0, 0.0])
+
+# all three at once: ICRS -&gt; CIRS -&gt; observed
+ri, di = erfa.atciq(stars_rc, stars_dc, stars_pr, stars_pd, stars_px, stars_rv, astrom)
+aob, zob, hob, dob, rob = erfa.atioq(ri, di, astrom)
+
+for i in range(3):
+    print(f&quot;star {i + 1}: azimuth = {aob[i] * DR2D:9.5f} deg, zenith distance = {zob[i] * DR2D:9.5f} deg&quot;)</code></pre>
+<pre><code class="language-plaintext">star 1: azimuth =  91.39161 deg, zenith distance =  42.75004 deg
+star 2: azimuth =   1.34603 deg, zenith distance = 143.55440 deg
+star 3: azimuth =   6.59167 deg, zenith distance =  46.17372 deg</code></pre>
+
+<p>The first object is the star of Example 3, at zenith distance 42.75&deg;, so it is well above the horizon. A zenith distance larger than 90&deg;, as for the second object, means that the object is below the horizon; the numbers are then just its direction as if the Earth were transparent. The same code would work with a million stars.</p>
+
+<h3>Updating only the Earth's rotation</h3>
+
+<p>A telescope control system needs a stream of positions, say once a second, for tracking. Almost everything in the context changes slowly, but the Earth rotates 15&deg; per hour. The function <code>aper13</code> updates only the Earth rotation angle in the context. It is not completely rigorous, because other things also change, but the neglected changes are small: in an hour, the diurnal aberration changes by up to 80 mas, the annual aberration by 15 mas, and the precession by 6 mas. Large telescopes rarely recompute the whole context more often than once a minute. Let us advance one hour and compare with a full computation:</p>
+
+<pre><code class="language-python">rc, dc = stars_rc[0], stars_dc[0]
+pr, pd, px, rv = stars_pr[0], stars_pd[0], stars_px[0], stars_rv[0]
+ri, di = erfa.atciq(rc, dc, pr, pd, px, rv, astrom)           # CIRS position, done once
+
+# one hour later: update only the Earth rotation angle in the context
+utc1b, utc2b = erfa.dtf2d(&quot;UTC&quot;, 2013, 4, 3, 0, 15, 43.55)
+ut11, ut12 = erfa.utcut1(utc1b, utc2b, dut1)
+astrom_later = erfa.aper13(ut11, ut12, astrom)
+
+quick = erfa.atioq(ri, di, astrom_later)
+full = erfa.atco13(rc, dc, pr, pd, px, rv, utc1b, utc2b, dut1,
+                   elong, phi, hm, xp, yp, phpa, tc, rh, wl)
+
+print(f&quot;azimuth:           quick {quick[0] * DR2D:.6f}  full {full[0] * DR2D:.6f} deg&quot;)
+print(f&quot;zenith distance:   quick {quick[1] * DR2D:.6f}  full {full[1] * DR2D:.6f} deg&quot;)
+print(f&quot;difference in azimuth: {abs(quick[0] - full[0]) / DAS2R:.3f} arcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">azimuth:           quick 86.936369  full 86.936386 deg
+zenith distance:   quick 28.299189  full 28.299203 deg
+difference in azimuth: 0.058 arcsec</code></pre>
+
+<p>The difference is only a small fraction of an arcsecond, much less than the accuracy a telescope needs for pointing.</p>
+
+<h2>Example 5: the long way, step by step</h2>
+
+<p>The one-call functions hide the physics. To really understand the chain, we now calculate the observed direction of a (fictitious) star with the individual building blocks of SOFA: <code>pmpx</code> (proper motion and parallax), <code>ldsun</code> (deflection by the Sun), <code>ab</code> (aberration), the bias-precession-nutation matrix, and <code>atio13</code> (for the Earth rotation, polar motion, diurnal effects and refraction). We follow the recipe published by Patrick Wallace in his "SOFA example PDF". All of it is done with vectors, using the tools of the Vector-Matrix library. The input data are:</p>
+
+<ul>
+  <li>The observing site: longitude 9.712156&deg; E, latitude 52.385639&deg; N, height 200 m. The time of observation is 2003 August 26, 00:37:38.973810 UTC.</li>
+  <li>The star (a fictitious Tycho-2 star, epoch 2000): \((\alpha, \delta) = (353.22987757^\circ, +52.27730247^\circ)\), proper motions \(\mu_\alpha\cos\delta = +22.9\) mas/yr and \(\mu_\delta = -2.1\) mas/yr, parallax 23 mas and radial velocity +25 km/s.</li>
+  <li>The Earth orientation parameters from the IERS: UT1&minus;UTC = &minus;0.349535 s, corrections to the CIP \(dX = +0.038\), \(dY = -0.118\) mas, polar motion \(x_p = 0.259371''\), \(y_p = 0.415573''\).</li>
+</ul>
+
+<pre><code class="language-python"># star
+rc = 353.22987757 * DD2R
+dc = 52.27730247 * DD2R
+pr = np.arctan2(22.9 * DMAS2R, np.cos(dc))      # mu_alpha* -&gt; d(alpha)/dt
+pd = -2.1 * DMAS2R
+px = 23.0 * 0.001
+rv = 25.0
+
+# time of observation (UTC -&gt; TT)
+utc1, utc2 = erfa.dtf2d(&quot;UTC&quot;, 2003, 8, 26, 0, 37, 38.973810)
+tai1, tai2 = erfa.utctai(utc1, utc2)
+tt1, tt2 = erfa.taitt(tai1, tai2)
+
+# Earth orientation parameters
+dut1 = -0.349535
+xp = 0.259371 * DAS2R
+yp = 0.415573 * DAS2R
+dx = 0.038 * DMAS2R
+dy = -0.118 * DMAS2R
+
+# a small helper: print a unit vector as right ascension and declination in degrees
+def print_sph(p, text):
+    w, d = erfa.c2s(p)
+    print(f&quot;{text}: ra = {erfa.anp(w) * DR2D:.8f}, dec = {d * DR2D:.8f}&quot;)</code></pre>
+
+<p><b>The bias-precession-nutation matrix.</b> We start with the matrix of the IAU 2006/2000A models, <code>pnm06a</code>. From it we extract the position of the CIP, add the IERS corrections to \(X\) and \(Y\), compute the CIO locator \(s\) for the corrected pole, and build a more accurate GCRS-to-CIRS matrix with <code>c2ixys</code>:</p>
+
+<pre><code class="language-python">r = erfa.pnm06a(tt1, tt2)
+x, y = erfa.bpn2xy(r)
+x, y = x + dx, y + dy
+s = erfa.s06(tt1, tt2, x, y)
+
+bpn = erfa.c2ixys(x, y, s)       # GCRS -&gt; CIRS</code></pre>
+
+<p><b>The Earth's position and velocity.</b> We need the heliocentric and the barycentric position and velocity of the Earth (<code>epv00</code>). From them we calculate a few quantities used later: the distance from the Sun to the observer \(em\) (in au) and the unit vector \(eh\) from the Sun to the observer, which is needed for the light deflection; the barycentric velocity \(v\) of the observer in units of the speed of light (the light travel time for 1 au is <code>AULT</code> seconds, and a day has <code>DAYSEC</code> seconds); and the reciprocal of the Lorentz factor \(bm1 = \sqrt{1-v^2}\), needed for aberration:</p>
+
+<pre><code class="language-python">pvh, pvb = erfa.epv00(tt1, tt2)
+
+em, eh = erfa.pn(pvh[&quot;p&quot;])                      # Sun-observer distance (au) and unit vector
+
+v = erfa.sxp(erfa.AULT / erfa.DAYSEC, pvb[&quot;v&quot;]) # barycentric velocity in units of c
+v2 = np.dot(v, v)
+bm1 = np.sqrt(1.0 - v2)                         # 1 / Lorentz factor</code></pre>
+
+<p>Up to here nothing depends on the star. Now we follow the light.</p>
+
+<p><b>1. Proper motion and parallax.</b> The function <code>pmpx</code> moves the star from the catalog epoch to the date of observation and applies the parallax with the position of the Earth. The time is counted in Julian years from J2000.0. The result is the direction of the star in the barycentric system (the "coordinate direction"):</p>
+
+<pre><code class="language-python">pmt = ((tt1 - erfa.DJ00) + tt2) / erfa.DJY      # time since J2000.0 in Julian years
+pco = erfa.pmpx(rc, dc, pr, pd, px, rv, pmt, pvb[&quot;p&quot;])
+print_sph(pco, &quot;BCRS (after proper motion and parallax)&quot;)</code></pre>
+<pre><code class="language-plaintext">BCRS (after proper motion and parallax): ra = 353.22991889, dec = 52.27730584</code></pre>
+
+<p><b>2. Light deflection by the Sun.</b> The Sun bends the light of every star a little, even far from the solar disc: here the change is about 2.5 milliarcseconds. The result is the "natural direction":</p>
+
+<pre><code class="language-python">pnat = erfa.ldsun(pco, eh, em)
+print_sph(pnat, &quot;BCRS (after light deflection)     &quot;)</code></pre>
+<pre><code class="language-plaintext">BCRS (after light deflection)     : ra = 353.22991848, dec = 52.27730518</code></pre>
+
+<p><b>3. Aberration.</b> It shifts the direction by about 18 arcseconds on the sky, as we can see below. The result is the "proper direction" and it is the GCRS position of the star:</p>
+
+<pre><code class="language-python">ppr = erfa.ab(pnat, v, em, bm1)
+print_sph(ppr, &quot;GCRS (after aberration)            &quot;)</code></pre>
+<pre><code class="language-plaintext">GCRS (after aberration)            : ra = 353.23789321, dec = 52.27695263</code></pre>
+
+<p><b>4. Bias, precession and nutation.</b> Multiplying with the matrix moves the star from the GCRS to the CIRS. We get the CIRS right ascension and declination:</p>
+
+<pre><code class="language-python">pi_vec = erfa.rxp(bpn, ppr)
+print_sph(pi_vec, &quot;CIRS                              &quot;)
+
+w, di = erfa.c2s(pi_vec)
+ri = erfa.anp(w)</code></pre>
+<pre><code class="language-plaintext">CIRS                              : ra = 353.23300209, dec = 52.29554174</code></pre>
+
+<p><b>5. From CIRS to the observer.</b> What remains (Earth rotation, polar motion, diurnal aberration and parallax, refraction) is the work of one function, <code>atio13</code>. If we give it zero atmospheric parameters, we get the topocentric direction. If we give the weather data (pressure, temperature, humidity, wavelength), we get the observed direction:</p>
+
+<pre><code class="language-python">elong = 9.712156 * DD2R
+phi = 52.385639 * DD2R
+hm = 200.0
+phpa = 1000.0       # pressure (hPa)
+tc = 20.0           # temperature (C)
+rh = 0.70           # relative humidity
+wl = 0.55           # wavelength (micrometers)
+
+# topocentric: no atmosphere
+aot, zot, hot, dot, rot = erfa.atio13(ri, di, utc1, utc2, dut1, elong, phi, hm, xp, yp,
+                                      0.0, 0.0, 0.0, 0.0)
+print(f&quot;Topocentric: hour angle = {hot * DR2D:.8f}, dec = {dot * DR2D:.8f}&quot;)
+print(f&quot;Topocentric: azimuth = {aot * DR2D:.8f}, altitude = {90 - zot * DR2D:.8f}&quot;)
+
+# observed: with refraction
+aob, zob, hob, dob, rob = erfa.atio13(ri, di, utc1, utc2, dut1, elong, phi, hm, xp, yp,
+                                      phpa, tc, rh, wl)
+print(f&quot;Observed   : azimuth = {aob * DR2D:.8f}, altitude = {90 - zob * DR2D:.8f}&quot;)</code></pre>
+<pre><code class="language-plaintext">Topocentric: hour angle = -0.29507963, dec = 52.29549063
+Topocentric: azimuth = 116.44983888, altitude = 89.79843387
+Observed   : azimuth = 116.44983888, altitude = 89.79848800</code></pre>
+
+<p>The star is close to the zenith (altitude 89.8&deg;), so the refraction raises it by only 0.00005&deg; (0.2 arcseconds). Finally, as a check, we compute the same thing with the single call <code>atco13</code>. The small difference comes from the CIP corrections, which the single call does not apply, and from the more rigorous treatment of the diurnal effects. Note that the azimuth is extremely sensitive when the star is so close to the zenith: 25 mas in azimuth is less than 0.1 mas on the sky.</p>
+
+<pre><code class="language-python">aob2, zob2, hob2, dob2, rob2, eo2 = erfa.atco13(rc, dc, pr, pd, px, rv, utc1, utc2, dut1,
+                                                elong, phi, hm, xp, yp, phpa, tc, rh, wl)
+print(f&quot;atco13     : azimuth = {aob2 * DR2D:.8f}, altitude = {90 - zob2 * DR2D:.8f}&quot;)
+print(f&quot;difference : {abs(aob - aob2) / DMAS2R:.2f} mas in azimuth, {abs(zob - zob2) / DMAS2R:.2f} mas in zenith distance&quot;)</code></pre>
+<pre><code class="language-plaintext">atco13     : azimuth = 116.44984579, altitude = 89.79848802
+difference : 24.88 mas in azimuth, 0.06 mas in zenith distance</code></pre>
+
+<h2>Moving the star: proper motion over long times</h2>
+
+<p>The straight-line proper motion in <code>pmpx</code> is exact only for a short time. If you want to move a catalog entry to another epoch (without going through the whole chain), use <code>pmsafe</code>. It also behaves well with stars that have no (or negative) parallax. The more rigorous function is <code>starpm</code>. For example: where is the star of Example 3 one hundred years after J2000.0?</p>
+
+<pre><code class="language-python"># the star of Example 3 again
+rc = erfa.tf2a(&quot;+&quot;, 14, 34, 16.81183)
+dc = erfa.af2a(&quot;-&quot;, 12, 31, 10.3965)
+pr = np.arctan2(-354.45e-3 * DAS2R, np.cos(dc))
+pd = 595.35e-3 * DAS2R
+px, rv = 164.99e-3, 0.0
+
+ep1 = (2451545.0, 0.0)                 # J2000.0
+ep2 = (2451545.0 + 36525.0, 0.0)       # J2100.0
+ra2, dec2, pr2, pd2, px2, rv2 = erfa.pmsafe(rc, dc, pr, pd, px, rv, *ep1, *ep2)
+
+print(f&quot;shift in ra  * cos(dec): {(ra2 - rc) * np.cos(dc) / DAS2R:8.2f} arcsec&quot;)
+print(f&quot;shift in dec           : {(dec2 - dc) / DAS2R:8.2f} arcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">shift in ra  * cos(dec):   -35.44 arcsec
+shift in dec           :    59.54 arcsec</code></pre>
+
+<p>In 100 years the star moves by about 35&Prime; towards smaller right ascension (measured on the sky) and by about 60&Prime; north, consistent with the proper motion of \((-354, +595)\) mas/yr.</p>
+
+<h2>Example 6: from the sky to a photographic plate (gnomonic projection)</h2>
+
+<p>To draw a small piece of the sky, or to measure positions on a photograph, we need a <em>map projection</em>. For small fields the <em>gnomonic</em> (or <em>tangent-plane</em>) projection is the natural one: it is exactly the geometry of a pinhole camera, and also very close to the one of classical long-focus telescopes. A point of the sky with \((\alpha, \delta)\) is projected on the plane that is tangent to the sphere at the <em>tangent point</em> (the plate centre). The coordinates on this plane are the <em>standard coordinates</em> \((\xi, \eta)\): the \(\eta\) axis points to the north, the \(\xi\) axis to the east, and near the tangent point they are measured in radians. Multiplying by the focal length gives the position on the plate in the same unit as the focal length.</p>
+
+<p>Real plate reduction adds more (the tilt of the plate, optical distortion, refraction), but the pure geometry is the basis. SOFA gives six functions in three pairs (one for spherical coordinates, one for vectors):</p>
+
+<table border="1" cellpadding="6" style="border-collapse:collapse">
+  <tr><th>You know</th><th>You want</th><th>Function</th></tr>
+  <tr><td>star + tangent point</td><td>standard coordinates \(\xi, \eta\)</td><td><code>tpxes</code> (<code>tpxev</code> for vectors)</td></tr>
+  <tr><td>\(\xi, \eta\) + tangent point</td><td>star</td><td><code>tpsts</code> (<code>tpstv</code>)</td></tr>
+  <tr><td>\(\xi, \eta\) + star</td><td>tangent point</td><td><code>tpors</code> (<code>tporv</code>)</td></tr>
+</table>
+
+<p>Let us try this: an astrograph with a focal length of 3430 mm and a photographic plate 120 mm wide, pointing at an observed position close to the north celestial pole: (9h 00m 00s, +89&deg; 30' 00"). This is a hard case, chosen to test the rigor of the algorithms. What are the plate coordinates of a star at (5h 00m 00s, +89&deg; 45' 00")?</p>
+
+<pre><code class="language-python">fl = 3430.0                                   # focal length (mm)
+
+raz, decz = 9.0 * 15.0 * DD2R, 89.5 * DD2R    # tangent point (radians)
+ra, dec = 5.0 * 15.0 * DD2R, 89.75 * DD2R     # the star
+
+xi, eta = erfa.tpxes(ra, dec, raz, decz)
+print(f&quot;image [x, y] / mm = {xi * fl:+8.3f}, {eta * fl:+8.3f}&quot;)</code></pre>
+<pre><code class="language-plaintext">image [x, y] / mm =  -12.961,  +22.450</code></pre>
+
+<p>The other way around: what star is at the plate position (&minus;20, +60) mm?</p>
+
+<pre><code class="language-python">x, y = -20.0, 60.0
+ra, dec = erfa.tpsts(x / fl, y / fl, raz, decz)
+
+sign, t = erfa.a2tf(2, ra)
+sign, d = erfa.a2af(1, dec)
+print(f&quot;star [RA, Dec] = {t[&#x27;h&#x27;]:02d} {t[&#x27;m&#x27;]:02d} {t[&#x27;s&#x27;]:02d}.{t[&#x27;f&#x27;]:02d}  &quot;
+      f&quot;{sign.decode()}{d[&#x27;h&#x27;]:02d} {d[&#x27;m&#x27;]:02d} {d[&#x27;s&#x27;]:02d}.{d[&#x27;f&#x27;]}&quot;)</code></pre>
+<pre><code class="language-plaintext">star [RA, Dec] = 23 14 31.74  +89 23 48.8</code></pre>
+
+<p>Finally, if we know the position of a star on the plate and in the sky, we can solve for the tangent point. In general, there can be zero, one or two solutions. Here we use the star we just found. The high-level wrapper <code>erfa.tpors</code> treats the status code as an error, so we call the low-level function from <code>erfa.ufunc</code>, which returns both solutions and the number of solutions:</p>
+
+<pre><code class="language-python">import erfa.ufunc
+
+az1, bz1, az2, bz2, n = erfa.ufunc.tpors(x / fl, y / fl, ra, dec)
+print(&quot;number of solutions:&quot;, n)
+
+for az, bz in [(az1, bz1), (az2, bz2)][:n]:
+    sign, t = erfa.a2tf(2, az)
+    sign, d = erfa.a2af(1, bz)
+    print(f&quot;tangent point = {t[&#x27;h&#x27;]:02d} {t[&#x27;m&#x27;]:02d} {t[&#x27;s&#x27;]:02d}.{t[&#x27;f&#x27;]:02d}  &quot;
+          f&quot;{sign.decode()}{d[&#x27;h&#x27;]:02d} {d[&#x27;m&#x27;]:02d} {d[&#x27;s&#x27;]:02d}.{d[&#x27;f&#x27;]}&quot;)</code></pre>
+<pre><code class="language-plaintext">number of solutions: 2
+tangent point = 01 29 03.48  +88 29 44.5
+tangent point = 09 00 00.00  +89 30 00.0</code></pre>
+
+<p>Two pointings of the astrograph would have put that star at that position of the plate: one is the true pointing we started with (9h, +89&deg; 30') and the other is on the other side of the pole. This ambiguity can only happen close to a celestial pole. Over most of the sky, and for small fields, there is exactly one solution.</p>
+
+<h2>Summary</h2>
+
+<ul>
+  <li>The chain of astrometry is: catalog (ICRS) &rarr; astrometric &rarr; GCRS &rarr; CIRS &rarr; observed. For most uses, three functions are enough: <code>atci13</code>, <code>atio13</code> and <code>atco13</code>, and their inverses.</li>
+  <li>Give the proper motion as \(d\alpha/dt\), not as \(\mu_\alpha\cos\delta\); the parallax in arcseconds; the time in TT or UTC as each function asks; and do not forget UT1&minus;UTC.</li>
+  <li>For many stars, fill the context once (<code>apci13</code>, <code>apco13</code>) and transform with <code>atciq</code> and <code>atioq</code>, that accept arrays. To track in time, update only the Earth rotation with <code>aper13</code>.</li>
+  <li>The functions without the "13" let you use your own ephemerides, CIP corrections and models. <code>atciqn</code> adds planets to the light deflection.</li>
+  <li>Every step (<code>pmpx</code>, <code>ldsun</code>, <code>ab</code>, the BPN matrix, <code>atio13</code>) can also be called by itself, as in Example 5.</li>
+  <li>The tangent-plane functions <code>tpxes</code>, <code>tpsts</code>, <code>tpors</code> link the sky with the images on a detector.</li>
+</ul>
+
+
+</body>
+</html>

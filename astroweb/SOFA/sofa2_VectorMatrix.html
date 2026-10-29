@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>SOFA - Vector-Matrix Library</title>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+	pre { color:white; background-color:black; }
+	code { background-color:lightgray; }
+  </style>
+</head>
+
+
+<body>
+
+<h1>SOFA: Vector-Matrix Library</h1>
+
+<p>Most of SOFA's astronomy functions are built on top of a small set of helper functions that work with angles, vectors and matrices. SOFA calls this set the <em>Vector-Matrix Library</em> (VML). It has about 55 functions. They are short and simple, but you will meet them in almost every example of the next chapters, so it is worth knowing them first.</p>
+
+<h2>Why vectors?</h2>
+
+<p>A star is so far away that, for most purposes, only its <em>direction</em> matters. We can imagine all stars sitting on the inside of a sphere, the <em>celestial sphere</em>, and describe a point on it with two angles such as right ascension and declination. This is the classical way, and the formulas that go with it are called <em>spherical trigonometry</em>.</p>
+
+<p>SOFA prefers another way. A direction can also be written as a unit vector \((x, y, z)\), whose three components are the cosines of the angles between the direction and the three axes. The vector approach has some real advantages:</p>
+
+<ul>
+  <li>Formulas are short. One vector operation replaces a long string of sines and cosines.</li>
+  <li>There are no special cases at the poles, and the quadrant of the answer is handled automatically (by <code>atan2</code>).</li>
+  <li>Precision is shared among the three components: when one is close to 1, the others are small and keep their relative precision.</li>
+  <li>Changing a coordinate system (for example from equatorial to galactic) is just a matrix multiplication.</li>
+</ul>
+
+<h2>The data types</h2>
+
+<p>The SOFA functions use four kinds of objects. In <code>pyerfa</code> they are all NumPy arrays:</p>
+
+<table border="1" cellpadding="6" style="border-collapse:collapse">
+  <tr><th>SOFA name</th><th>Meaning</th><th>In pyerfa</th></tr>
+  <tr><td>p-vector</td><td>position, an ordinary 3-vector</td><td>array of shape <code>(3,)</code></td></tr>
+  <tr><td>pv-vector</td><td>position and velocity</td><td>structured array with fields <code>'p'</code> and <code>'v'</code></td></tr>
+  <tr><td>r-matrix</td><td>3&times;3 rotation matrix</td><td>array of shape <code>(3, 3)</code></td></tr>
+  <tr><td>r-vector</td><td>rotation vector: its direction is the rotation axis and its length is the rotation angle in radians</td><td>array of shape <code>(3,)</code></td></tr>
+</table>
+
+<p>Because the functions of <code>pyerfa</code> are NumPy <em>universal functions</em>, you can also give them arrays of values and get arrays back. For example, the next code converts three stars to unit vectors with a single call:</p>
+
+<pre><code class="language-python">import numpy as np
+import erfa
+
+ra  = np.array([0.0, 1.0, 2.0])    # radians
+dec = np.array([0.1, 0.2, 0.3])
+p = erfa.s2c(ra, dec)
+print(p.shape)
+print(p[1])</code></pre>
+<pre><code class="language-plaintext">(3, 3)
+[0.52953223 0.82469759 0.19866933]</code></pre>
+
+<h2>The main functions</h2>
+
+<p>The names below are the pyerfa names. In the C library each name has the prefix <code>iau</code> (for example <code>iauS2c</code>).</p>
+
+<ul>
+  <li><b>Spherical &harr; Cartesian:</b> <code>s2c</code> and <code>c2s</code> (unit vector), <code>s2p</code> and <code>p2s</code> (vector with a length), <code>s2pv</code> and <code>pv2s</code> (with velocity).</li>
+  <li><b>Vector arithmetic:</b> <code>ppp</code> (add), <code>pmp</code> (subtract), <code>pdp</code> (dot product), <code>pxp</code> (cross product), <code>pm</code> (length), <code>pn</code> (normalize), <code>sxp</code> (multiply by a scalar).</li>
+  <li><b>Matrices:</b> <code>ir</code> (identity), <code>rx</code>, <code>ry</code>, <code>rz</code> (rotate about an axis), <code>rxr</code> (matrix product), <code>tr</code> (transpose), <code>rxp</code> (matrix times vector), <code>trxp</code> (transposed matrix times vector).</li>
+  <li><b>Rotation vectors:</b> <code>rm2v</code> (matrix to r-vector) and <code>rv2m</code> (r-vector to matrix).</li>
+  <li><b>Angles:</b> <code>anp</code> (normalize to 0..2&pi;), <code>anpm</code> (normalize to &minus;&pi;..+&pi;), <code>a2af</code> and <code>a2tf</code> (radians to degrees-arcminutes-arcseconds or hours-minutes-seconds), <code>af2a</code> and <code>tf2a</code> (the opposite), <code>d2tf</code> and <code>tf2d</code> (days &harr; hours-minutes-seconds).</li>
+  <li><b>On the sphere:</b> <code>seps</code> and <code>sepp</code> (angular separation), <code>pas</code> and <code>pap</code> (position angle).</li>
+</ul>
+
+<p>There are also <code>pv</code> versions of many of these (<code>pvppv</code>, <code>pvmpv</code>, <code>rxpv</code>, ...). A rotation matrix is applied to a vector with <code>rxp</code>. When you build a matrix from several rotations, remember that each new rotation is applied <em>after</em> the previous ones, so the order of the calls matters.</p>
+
+<h2>Example 1: writing angles safely</h2>
+
+<p>Converting an angle to hours, minutes and seconds looks easy, but there are two classic bugs: rounding can produce silly values such as <code>24h 59m 59.999s</code> instead of rounding up to the next unit, and the sign of angles between 0 and &minus;1 can be lost ("minus zero" bug). The SOFA functions avoid both. Let us display an hour angle that lies very close to &minus;1 hour, with two different resolutions:</p>
+
+<pre><code class="language-python">ha = -0.261799315          # radians, about -1 hour
+
+for ndp in (3, 2):
+    sign, ihmsf = erfa.a2tf(ndp, ha)
+    sign = sign.decode()   # pyerfa returns the sign as bytes
+    print(f&quot;{sign}{ihmsf[&#x27;h&#x27;]:02d} {ihmsf[&#x27;m&#x27;]:02d} {ihmsf[&#x27;s&#x27;]:02d}.{ihmsf[&#x27;f&#x27;]:0{ndp}d}&quot;)</code></pre>
+<pre><code class="language-plaintext">-00 59 59.999
+-01 00 00.00</code></pre>
+
+<p>With three decimals the value is still just below one hour; with two decimals it is rounded up correctly to exactly one hour, and the minus sign is kept in both cases. The result of <code>a2tf</code> has the fields <code>h</code>, <code>m</code>, <code>s</code> and <code>f</code> (the last one is the fraction of the second, as an integer with <code>ndp</code> digits). <code>a2af</code> returns the same four fields for degrees, arcminutes and arcseconds; there, the field named <code>h</code> holds the degrees.</p>
+
+<h2>Example 2: from London to Sydney</h2>
+
+<p>The functions <code>seps</code> and <code>pas</code> are the only SOFA functions that work directly on spherical coordinates. The first gives the angular separation between two points and the second gives the direction (position angle, measured from north through east) of the second point as seen from the first. They work on any sphere, so we can use them on the Earth, with a mean radius of about 6375 km, to estimate the distance and the initial compass heading for a flight from London to Sydney:</p>
+
+<pre><code class="language-python">R2D = erfa.DR2D     # radians to degrees
+RKM = 6375.0        # Earth radius in km
+
+# longitude and latitude (radians) of London and Sydney
+lon_l, lat_l = np.radians(-0.2),  np.radians(51.5)
+lon_s, lat_s = np.radians(151.2), np.radians(-33.9)
+
+dist = erfa.seps(lon_l, lat_l, lon_s, lat_s) * RKM
+head = erfa.pas(lon_l, lat_l, lon_s, lat_s) * R2D
+print(f&quot;{dist:.0f} km, {head:.0f} deg&quot;)</code></pre>
+<pre><code class="language-plaintext">17011 km, 61 deg</code></pre>
+
+<p>The distance is about 17,000 km and the initial heading is 61&deg; (northeast, towards Moscow). If your points are already unit vectors, use <code>sepp</code> and <code>pap</code> instead.</p>
+
+<h2>Example 3: why vectors are more accurate</h2>
+
+<p>The source ICRF J044238.6-001743 appears in two versions of the International Celestial Reference Frame, ICRF2 and ICRF3, with slightly different coordinates. How far did it move between the two? We compute the answer in two ways. The first is spherical trigonometry (the cosine rule). The second uses vectors: the sine of the angle comes from the cross product and the cosine from the dot product.</p>
+
+<pre><code class="language-python"># the same source in ICRF2 and ICRF3 (right ascension from hms, declination from dms)
+ra_a = erfa.tf2a(&#x27;+&#x27;, 4, 42, 38.66073910)
+de_a = erfa.af2a(&#x27;-&#x27;, 0, 17, 43.4203921)
+ra_b = erfa.tf2a(&#x27;+&#x27;, 4, 42, 38.66072366)
+de_b = erfa.af2a(&#x27;-&#x27;, 0, 17, 43.4209582)
+
+# Method 1: cosine rule
+theta = np.arccos(np.sin(de_a)*np.sin(de_b) + np.cos(de_a)*np.cos(de_b)*np.cos(ra_b - ra_a))
+print(f&quot;cosine rule: {theta * erfa.DR2AS:.6f} arcsec&quot;)
+
+# Method 2: vectors
+a = erfa.s2c(ra_a, de_a)
+b = erfa.s2c(ra_b, de_b)
+s = erfa.pm(erfa.pxp(a, b))      # sin(theta)
+c = erfa.pdp(a, b)               # cos(theta)
+theta = np.arctan2(s, c)
+print(f&quot;vectors:     {theta * erfa.DR2AS:.6f} arcsec&quot;)</code></pre>
+<pre><code class="language-plaintext">cosine rule: 0.000000 arcsec
+vectors:     0.000612 arcsec</code></pre>
+
+<p>The two positions differ by only 0.0006 arcseconds. The cosine rule fails completely, because the cosine of such a tiny angle is extremely close to 1 and the computer cannot see the difference. The vector method gives the right answer because it computes the sine and the cosine separately. This is exactly what <code>seps</code> and <code>sepp</code> do inside, so in a real program you would simply write <code>erfa.seps(ra_a, de_a, ra_b, de_b)</code>.</p>
+
+<h2>Rotation vectors</h2>
+
+<p>A rotation matrix has nine numbers, but a rotation needs only three. A <em>rotation vector</em> (r-vector) stores a rotation as a single 3-vector: it points along the rotation axis and its length is the angle. This is easy to understand and easy to scale (double the vector and you double the rotation). SOFA offers two functions to convert between the two forms, <code>rm2v</code> and <code>rv2m</code>.</p>
+
+<p>As an example, consider the tiny difference between the ICRS and the mean equator and equinox of J2000.0, known as the <em>frame bias</em>. It is made of three small rotations (angles in arcseconds from the IAU models). We build the matrix, convert it to an r-vector and then ask: around which point of the sky is the rotation, and how large is it?</p>
+
+<pre><code class="language-python">DAS2R = erfa.DAS2R
+eps0 = 84381.448 * DAS2R         # mean obliquity at J2000.0
+
+# frame bias matrix: three small rotations, applied in this order
+rb = erfa.ir()
+rb = erfa.rz(-0.0146 * DAS2R, rb)
+rb = erfa.ry(-0.041775 * DAS2R * np.sin(eps0), rb)
+rb = erfa.rx(0.0068192 * DAS2R, rb)
+
+# matrix to r-vector, then r-vector to spherical coordinates
+vb = erfa.rm2v(rb)
+ra, dec, angle = erfa.p2s(vb)
+
+sign, hms = erfa.a2tf(1, erfa.anp(ra))
+sign, dms = erfa.a2af(0, dec)     # note: for degrees the field &#x27;h&#x27; holds the degrees
+print(f&quot;Frame bias is {angle / DAS2R * 1000:.1f} mas around &quot;
+      f&quot;{hms[&#x27;h&#x27;]:02d} {hms[&#x27;m&#x27;]:02d} {hms[&#x27;s&#x27;]:02d}.{hms[&#x27;f&#x27;]} &quot;
+      f&quot;{sign.decode()}{dms[&#x27;h&#x27;]:02d} {dms[&#x27;m&#x27;]:02d} {dms[&#x27;s&#x27;]:02d}&quot;)</code></pre>
+<pre><code class="language-plaintext">Frame bias is 23.1 mas around 19 29 14.8 -39 06 19</code></pre>
+
+<p>The whole frame bias is only about 23 milliarcseconds, a rotation around a point in the southern sky. In a real program you would not type these numbers yourself: the function <code>erfa.bi00</code> or the precession functions of the next chapters give them to you.</p>
+
+<h2>Summary</h2>
+
+<ul>
+  <li>SOFA works with unit vectors and rotation matrices instead of spherical trigonometry.</li>
+  <li>In <code>pyerfa</code>, vectors and matrices are plain NumPy arrays, and all functions accept arrays.</li>
+  <li><code>s2c</code>/<code>c2s</code> move between angles and vectors; <code>rx</code>, <code>ry</code>, <code>rz</code> and <code>rxp</code> rotate; <code>seps</code>/<code>pas</code> measure on the sphere.</li>
+  <li>Use <code>a2tf</code>, <code>a2af</code>, <code>tf2a</code> and <code>af2a</code> to format angles safely.</li>
+</ul>
+
+
+</body>
+</html>
