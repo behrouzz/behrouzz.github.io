@@ -53,27 +53,102 @@
 
 <p>The result is that the sequence of coordinate systems that connect a star in the ICRS to what the observer sees is the following:</p>
 
-<pre>
-ICRS  [ra, dec, proper motion, parallax, radial velocity]
-  |  space motion, parallax
-  v
-astrometric [ra, dec]
-  |  light deflection, aberration
-  v
-GCRS  [ra, dec]
-  |  frame bias, precession-nutation        &lt;-- the matrix R_NPB (this chapter)
-  v
-CIRS  [ra, dec]       (Celestial Intermediate Reference System)
-  |  Earth rotation angle                   &lt;-- ERA(UT1)
-  v
-TIRS  [ra, dec]       (Terrestrial Intermediate Reference System)
-  |  polar motion                           &lt;-- matrix R_PM
-  v
-ITRS  [x, y, z]       (International Terrestrial Reference System)
-  |  longitude, latitude of the observer
-  v
-local [hour angle, dec]  -->  [azimuth, zenith distance]
-</pre>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1222 933" role="img" aria-labelledby="t-earth d-earth" style="display:block;width:100%;max-width:1222px;height:auto;margin:1em auto;">
+<title id="t-earth">Sequence of coordinate systems from the ICRS to the observer</title>
+<desc id="d-earth">After frame bias, the route splits: the classical equinox-based branch passes through geocentric apparent coordinates and sidereal time, the modern CIO-based branch passes through the CIRS and the Earth rotation angle. Both continue with TIRS, ITRS, local apparent, topocentric and observed coordinates.</desc>
+<defs><marker id="arrow-earth" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M1,1 L11,6 L1,11 Z" fill="#6b7785"/></marker></defs>
+<rect x="0" y="0" width="1222" height="933" rx="14" fill="#ffffff" stroke="#dfe4ea"/>
+<rect x="30" y="22" width="22" height="16" rx="4" fill="#e8f0fe" stroke="#3b6fd1" stroke-width="2"/>
+<text x="60" y="35" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#44505f">star, solar system and sky frames</text>
+<rect x="361.3" y="22" width="22" height="16" rx="4" fill="#e4f5ea" stroke="#2f9457" stroke-width="2"/>
+<text x="391.3" y="35" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#44505f">Earth attitude</text>
+<rect x="538.7" y="22" width="22" height="16" rx="4" fill="#fff0dc" stroke="#d9822b" stroke-width="2"/>
+<text x="568.7" y="35" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#44505f">observer on the ground</text>
+<rect x="80" y="74" width="200" height="138" rx="12" fill="#e8f0fe" stroke="#3b6fd1" stroke-width="2.2"/>
+<text x="180.0" y="105" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#1d3f87">ICRS</text>
+<line x1="106" x2="254" y1="117" y2="117" stroke="#3b6fd1" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="180.0" y="140" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">ra, dec,</text>
+<text x="180.0" y="161" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">pm_ra, pm_dec,</text>
+<text x="180.0" y="182" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">parallax,</text>
+<text x="180.0" y="203" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">radial velocity</text>
+<rect x="384" y="74" width="200" height="138" rx="12" fill="#e8f0fe" stroke="#3b6fd1" stroke-width="2.2"/>
+<text x="484.0" y="105" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#1d3f87">BCRS</text>
+<line x1="410" x2="558" y1="117" y2="117" stroke="#3b6fd1" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="484.0" y="144" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">ra, dec, distance</text>
+<rect x="688" y="74" width="200" height="138" rx="12" fill="#e8f0fe" stroke="#3b6fd1" stroke-width="2.2"/>
+<text x="788.0" y="105" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#1d3f87">astrometric</text>
+<line x1="714" x2="862" y1="117" y2="117" stroke="#3b6fd1" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="788.0" y="144" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">ra, dec</text>
+<rect x="992" y="74" width="200" height="138" rx="12" fill="#e8f0fe" stroke="#3b6fd1" stroke-width="2.2"/>
+<text x="1092.0" y="105" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#1d3f87">GCRS</text>
+<line x1="1018" x2="1166" y1="117" y2="117" stroke="#3b6fd1" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="1092.0" y="144" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">ra, dec</text>
+<path d="M283,143.0 L379,143.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="332.0" y="132.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">space motion</text>
+<path d="M587,143.0 L683,143.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="636.0" y="132.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">parallax</text>
+<path d="M891,143.0 L987,143.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="940.0" y="132.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">aberration</text>
+<text x="940.0" y="113.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">deflection,</text>
+<text x="940.0" y="94.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">light</text>
+<rect x="80" y="317" width="200" height="138" rx="12" fill="#e4f5ea" stroke="#2f9457" stroke-width="2.2"/>
+<text x="180.0" y="348" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17.5" font-weight="700" fill="#17613a">geocentric apparent</text>
+<line x1="106" x2="254" y1="360" y2="360" stroke="#2f9457" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="180.0" y="387" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">ra, dec</text>
+<text x="180.0" y="441" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" font-style="italic" fill="#2f9457">classical route</text>
+<rect x="80" y="507" width="200" height="138" rx="12" fill="#e4f5ea" stroke="#2f9457" stroke-width="2.2"/>
+<text x="180.0" y="538" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#17613a">CIRS</text>
+<line x1="106" x2="254" y1="550" y2="550" stroke="#2f9457" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="180.0" y="577" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">ra, dec</text>
+<text x="180.0" y="631" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" font-style="italic" fill="#2f9457">modern route (recommended)</text>
+<text x="180.0" y="305" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">equinox based precession-nutation</text>
+<text x="180.0" y="495" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">CIO based precession-nutation</text>
+<path d="M1092.0,215 L1092.0,244.0 Q1092.0,258 1078.0,258.0 L48.0,258.0 Q34,258 34.0,272.0 L34.0,562.0 Q34,576.0 48.0,576.0 L75,576.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<path d="M34,386.0 L75,386.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="563.0" y="247" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">frame bias</text>
+<rect x="688" y="412.0" width="200" height="138" rx="12" fill="#e4f5ea" stroke="#2f9457" stroke-width="2.2"/>
+<text x="788.0" y="443.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#17613a">TIRS</text>
+<line x1="714" x2="862" y1="455.0" y2="455.0" stroke="#2f9457" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="788.0" y="482.0" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">longitude, latitude</text>
+<rect x="992" y="412.0" width="200" height="138" rx="12" fill="#e4f5ea" stroke="#2f9457" stroke-width="2.2"/>
+<text x="1092.0" y="443.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#17613a">ITRS</text>
+<line x1="1018" x2="1166" y1="455.0" y2="455.0" stroke="#2f9457" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="1092.0" y="482.0" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">longitude, latitude</text>
+<path d="M283,386.0 L614.0,386.0 Q628,386.0 628.0,400.0 L628.0,467.0 Q628,481.0 642.0,481.0 L683,481.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<path d="M283,576.0 L614.0,576.0 Q628,576.0 628.0,562.0 L628,481.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="454.0" y="375.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">Greenwich apparent sidereal time</text>
+<text x="454.0" y="565.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">Earth rotation angle</text>
+<path d="M891,481.0 L987,481.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="940.0" y="470.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">polar motion</text>
+<rect x="80" y="765" width="200" height="138" rx="12" fill="#fff0dc" stroke="#d9822b" stroke-width="2.2"/>
+<text x="180.0" y="796" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17.5" font-weight="700" fill="#8a4a0a">local apparent</text>
+<line x1="106" x2="254" y1="808" y2="808" stroke="#d9822b" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="180.0" y="835" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">hour angle, dec</text>
+<rect x="384" y="765" width="200" height="138" rx="12" fill="#fff0dc" stroke="#d9822b" stroke-width="2.2"/>
+<text x="484.0" y="796" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#8a4a0a">topocentric</text>
+<line x1="410" x2="558" y1="808" y2="808" stroke="#d9822b" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="484.0" y="835" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">hour angle, dec</text>
+<rect x="688" y="765" width="200" height="138" rx="12" fill="#fff0dc" stroke="#d9822b" stroke-width="2.2"/>
+<text x="788.0" y="796" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#8a4a0a">topocentric</text>
+<line x1="714" x2="862" y1="808" y2="808" stroke="#d9822b" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="788.0" y="835" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">az, alt</text>
+<rect x="992" y="765" width="200" height="138" rx="12" fill="#fff0dc" stroke="#d9822b" stroke-width="2.2"/>
+<text x="1092.0" y="796" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" font-weight="700" fill="#8a4a0a">observed</text>
+<line x1="1018" x2="1166" y1="808" y2="808" stroke="#d9822b" stroke-opacity="0.35" stroke-width="1.2"/>
+<text x="1092.0" y="835" text-anchor="middle" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace" font-size="15.5" fill="#1b2430">az, alt</text>
+<path d="M283,834.0 L379,834.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="332.0" y="823.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">(and parallax)</text>
+<text x="332.0" y="804.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">aberration</text>
+<text x="332.0" y="785.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">diurnal</text>
+<path d="M587,834.0 L683,834.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="636.0" y="823.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">latitude</text>
+<path d="M891,834.0 L987,834.0" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="940.0" y="823.0" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">refraction</text>
+<path d="M1092.0,553.0 L1092.0,642.5 Q1092.0,656.5 1078.0,656.5 L194.0,656.5 Q180.0,656.5 180.0,670.5 L180.0,760" fill="none" stroke="#6b7785" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-earth)"/>
+<text x="636.0" y="645.5" text-anchor="middle" font-family="system-ui, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15.5" font-style="italic" fill="#44505f">longitude</text>
+</svg>
+
+<p>Read the diagram from left to right and from top to bottom. Each box is a reference system, with the variables that describe a direction in it, and each arrow is a correction or a transformation. The first row is the work of the astrometry chapter: from the ICRS catalog entry, the <em>space motion</em> gives the <em>BCRS</em> (the star's direction as seen from the barycentre of the Solar System at the date of observation), the <em>parallax</em> gives the astrometric place, and <em>light deflection</em> and <em>aberration</em> give the geocentric direction, the <em>GCRS</em>. The rest of the diagram, from the GCRS to the ITRS, is what this chapter is about. Here the route splits into the classical and the modern branch, which join again at the TIRS. (In the astrometry chapter we use the modern branch only.) Note that for the TIRS and the ITRS the coordinates are a terrestrial longitude and latitude.</p>
 
 <p>The old route, with the equinox and sidereal time, is still supported by SOFA for old applications. It replaces CIRS by the <em>geocentric apparent place</em> and the Earth rotation angle by the <em>Greenwich apparent sidereal time</em> (GST). SOFA's advice is clear: <b>use the CIO-based method for every new application</b>.</p>
 
