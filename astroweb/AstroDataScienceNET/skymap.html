@@ -10,7 +10,15 @@
 
   <style>
 	pre { color:white; background-color:black; }
-	code { background-color:lightgray; }
+	/* inline code: blue tinted pill */
+	code {
+	  font-family: ui-monospace, 'Cascadia Code', Consolas, 'Liberation Mono', monospace;
+	  font-size: 0.88em;
+	  background: #eef3fc; color: #1f4fa8;
+	  padding: 0.1em 0.35em; border-radius: 5px; border: 1px solid #d5e1f7;
+	}
+	/* code blocks keep their own look */
+	pre code { font-family: monospace; font-size: 13px; border-radius: 0; border: 0; }
   </style>
 </head>
 
