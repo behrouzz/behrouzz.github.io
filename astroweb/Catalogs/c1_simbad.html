@@ -57,7 +57,7 @@ Name: 0, dtype: object
 
 <p>You can see that the resulting table contains a few columns that give some information about the coordinates. You may need many more information, such as parallax. In this case, you can first create an instance of the <code>Simbad</code> class, then use <code>.add_votable_fields()</code> and pass it your desired columns names.</p>
 
-<pre><code class="language-python">from astroquery.simbad import Simbad
+<pre><code class="language-python">>>> from astroquery.simbad import Simbad
 >>> simbad = Simbad()
 >>> simbad.add_votable_fields('parallax')
 >>> table = Simbad.query_object("m31")
@@ -103,11 +103,11 @@ Name: 0, dtype: object
 
 <p>If you are looking for objects at a cetrain location in the sky, you can use the <code>query_region</code> function. You give your desired coordinates and the radius of the region your are searching.</p>
 
-<pre><code class="language-python">from astroquery.simbad import Simbad
-from astropy.coordinates import SkyCoord
-import astropy.units as u
-coord = SkyCoord(ra=10.68470833, dec=41.26875, unit='deg')
-table = Simbad.query_region(coordinates=coord, radius=10*u.arcsec)
+<pre><code class="language-python">>>> from astroquery.simbad import Simbad
+>>> from astropy.coordinates import SkyCoord
+>>> import astropy.units as u
+>>> coord = SkyCoord(ra=10.68470833, dec=41.26875, unit='deg')
+>>> table = Simbad.query_region(coordinates=coord, radius=10*u.arcsec)
 >>> print(table[:5])
                MAIN_ID                     RA      ... SCRIPT_NUMBER_ID
                                         "h:m:s"    ...                 
