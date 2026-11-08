@@ -38,8 +38,6 @@ let rv = -1.28
 
 // Time of observation
 let (utc1, utc2) = faws.dtf2d("UTC", 2024, 2, 10, 22, 32, 37.0)
-//let (tai1, tai2) = faws.utctai(utc1, utc2)
-//let (tt1, tt2) = faws.taitt(tai1, tai2)
 
 // Earth Orientation Parameters
 let dut1 = 0.00261476
